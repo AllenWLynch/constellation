@@ -1,0 +1,534 @@
+[
+    [
+        "disease",
+        "infectious diseases"
+    ],
+    [
+        "disease",
+        "virus diseases"
+    ],
+    [
+        "infectious diseases",
+        "infection"
+    ],
+    [
+        "infection",
+        "virus infection"
+    ],
+    [
+        "infection",
+        "infections"
+    ],
+    [
+        "infections",
+        "infection"
+    ],
+    [
+        "symptoms",
+        "inflammation"
+    ],
+    [
+        "virus infection",
+        "respiratory infections"
+    ],
+    [
+        "respiratory infections",
+        "bronchitis"
+    ],
+    [
+        "coronavirus",
+        "coronavirus symptoms"
+    ],
+    [
+        "coronavirus symptoms",
+        "fever"
+    ],
+    [
+        "coronavirus symptoms",
+        "sore throat"
+    ],
+    [
+        "coronavirus symptoms",
+        "pneumonia"
+    ],
+    [
+        "coronavirus symptoms",
+        "cough"
+    ],
+    [
+        "respiratory infections",
+        "measles"
+    ],
+    [
+        "fever",
+        "encephalitis"
+    ],
+    [
+        "respiratory infections",
+        "inflammation"
+    ],
+    [
+        "respiratory infections",
+        "respiratory tract infections"
+    ],
+    [
+        "respiratory syndrome",
+        "acute respiratory syndrome"
+    ],
+    [
+        "respiratory syndrome",
+        "MERS"
+    ],
+    [
+        "respiratory syndrome",
+        "severe acute respiratory syndrome"
+    ],
+    [
+        "respiratory syndrome",
+        "respiratory syndrome coronavirus"
+    ],
+    [
+        "severe acute respiratory syndrome",
+        "SARS"
+    ],
+    [
+        "SARS",
+        "severe acute respiratory syndrome"
+    ],
+    [
+        "respiratory infections",
+        "H1N1"
+    ],
+    [
+        "respiratory infections",
+        "respiratory syndrome"
+    ],
+    [
+        "respiratory infections",
+        "throat"
+    ],
+    [
+        "noninfectious disease",
+        "cancer"
+    ],
+    [
+        "cancer",
+        "tumor"
+    ],
+    [
+        "MERS",
+        "MERS-CoV infection"
+    ],
+    [
+        "MERS-CoV infection",
+        "MERS"
+    ],
+    [
+        "MERS",
+        "Middle East respiratory syndrome"
+    ],
+    [
+        "Middle East respiratory syndrome",
+        "MERS"
+    ],
+    [
+        "coronavirus",
+        "MERS"
+    ],
+    [
+        "coronavirus",
+        "H1N1"
+    ],
+    [
+        "coronavirus",
+        "SARS"
+    ],
+    [
+        "coronavirus",
+        "COVID-19"
+    ],
+    [
+        "symptoms",
+        "wheezing"
+    ],
+    [
+        "risk factors",
+        "cancer"
+    ],
+    [
+        "risk factors",
+        "diabetes"
+    ],
+    [
+        "risk factors",
+        "immunocompromised"
+    ],
+    [
+        "risk factors",
+        "obesity"
+    ],
+    [
+        "obesity",
+        "Obesity"
+    ],
+    [
+        "Obesity",
+        "obesity"
+    ],
+    [
+        "immunocompromised",
+        "human immunodeficiency virus (HIV)"
+    ],
+    [
+        "human immunodeficiency virus (HIV)",
+        "HIV"
+    ],
+    [
+        "HIV",
+        "human immunodeficiency virus (HIV)"
+    ],
+    [
+        "immunocompromised",
+        "immunodeficiency"
+    ],
+    [
+        "immunodeficiency",
+        "immunocompromised"
+    ],
+    [
+        "infectious diseases",
+        "Ebola"
+    ],
+    [
+        "Ebola",
+        "Ebola virus"
+    ],
+    [
+        "Ebola virus",
+        "Ebola virus infection"
+    ],
+    [
+        "Ebola virus infection",
+        "Ebola virus"
+    ],
+    [
+        "infectious diseases",
+        "zoonotic disease"
+    ],
+    [
+        "zoonotic disease",
+        "SARS"
+    ],
+    [
+        "zoonotic disease",
+        "MERS"
+    ],
+    [
+        "zoonotic disease",
+        "COVID-19"
+    ],
+    [
+        "SARS",
+        "SARS-CoV infection"
+    ],
+    [
+        "SARS",
+        "SARS-CoV"
+    ],
+    [
+        "lung infection",
+        "bronchitis"
+    ],
+    [
+        "lung infection",
+        "bronchiolitis"
+    ],
+    [
+        "lung infection",
+        "pneumonia"
+    ],
+    [
+        "respiratory infection",
+        "lung infection"
+    ],
+    [
+        "coronavirus",
+        "influenza"
+    ],
+    [
+        "infection",
+        "influenza-like illness"
+    ],
+    [
+        "respiratory syndrome",
+        "respiratory syndrome virus"
+    ],
+    [
+        "virus infection",
+        "hepatitis"
+    ],
+    [
+        "hepatitis",
+        "hepatitis C"
+    ],
+    [
+        "hepatitis",
+        "hepatitis B"
+    ],
+    [
+        "virus diseases",
+        "hepatitis"
+    ],
+    [
+        "virus infection",
+        "gastroenteritis"
+    ],
+    [
+        "gastroenteritis",
+        "gastroenteritis virus"
+    ],
+    [
+        "gastroenteritis",
+        "enterovirus"
+    ],
+    [
+        "respiratory infections",
+        "pneumonia"
+    ],
+    [
+        "pneaumonia",
+        "Streptococcus pneumoniae"
+    ],
+    [
+        "noninfectious disease",
+        "diabetes"
+    ],
+    [
+        "influenza",
+        "influenza infection"
+    ],
+    [
+        "influenza infection",
+        "influenza"
+    ],
+    [
+        "symptoms",
+        "cough"
+    ],
+    [
+        "symptoms",
+        "fever"
+    ],
+    [
+        "symptoms",
+        "throat"
+    ],
+    [
+        "symptoms",
+        "sepsis"
+    ],
+    [
+        "respiratory infection",
+        "respiratory failure"
+    ],
+    [
+        "infection",
+        "bacterial infection"
+    ],
+    [
+        "bacterial infection",
+        "pneumonia"
+    ],
+    [
+        "hepatitis",
+        "hepatitis A"
+    ],
+    [
+        "infectious diseases",
+        "human immunodeficiency virus"
+    ],
+    [
+        "human immunodeficiency virus",
+        "HIV infection"
+    ],
+    [
+        "HIV infection",
+        "human immunodeficiency virus"
+    ],
+    [
+        "human immunodeficiency virus",
+        "human immunodeficiency virus (HIV)"
+    ],
+    [
+        "human immunodeficiency virus (HIV)",
+        "human immunodeficiency virus"
+    ],
+    [
+        "symptoms",
+        "sore throat"
+    ],
+    [
+        "pneumonia",
+        "viral pneumonia"
+    ],
+    [
+        "HIV infection",
+        "human immunodeficiency virus (HIV)"
+    ],
+    [
+        "human immunodeficiency virus (HIV)",
+        "HIV infection"
+    ],
+    [
+        "symptoms",
+        "viral diarrhea"
+    ],
+    [
+        "HIV infection",
+        "AIDS"
+    ],
+    [
+        "COVID-19",
+        "coronavirus disease 2019"
+    ],
+    [
+        "coronavirus disease 2019",
+        "COVID-19"
+    ],
+    [
+        "bloodborne pathogen",
+        "Ebola"
+    ],
+    [
+        "bloodborne pathogen",
+        "Malaria"
+    ],
+    [
+        "disease",
+        "bloodborne pathogen"
+    ],
+    [
+        "infection",
+        "symptoms"
+    ],
+    [
+        "symptoms",
+        "vomiting"
+    ],
+    [
+        "virus diseases",
+        "viral disease"
+    ],
+    [
+        "viral disease",
+        "virus diseases"
+    ],
+    [
+        "tumor",
+        "tumors"
+    ],
+    [
+        "tumors",
+        "tumor"
+    ],
+    [
+        "respiratory infection",
+        "acute respiratory infection"
+    ],
+    [
+        "immunocompromised",
+        "autoimmune diseases"
+    ],
+    [
+        "fever",
+        "Fever"
+    ],
+    [
+        "Fever",
+        "fever"
+    ],
+    [
+        "MERS",
+        "Middle East Respiratory Syndrome"
+    ],
+    [
+        "Middle East Respiratory Syndrome",
+        "MERS"
+    ],
+    [
+        "infectious diseases",
+        "tuberculosis"
+    ],
+    [
+        "tuberculosis",
+        "Mycobacterium tuberculosis"
+    ],
+    [
+        "sepsis",
+        "shock"
+    ],
+    [
+        "lung infection",
+        "lung injury"
+    ],
+    [
+        "symptoms",
+        "pain"
+    ],
+    [
+        "symptoms",
+        "headache"
+    ],
+    [
+        "encephalitis",
+        "neuroinflammation"
+    ],
+    [
+        "neuroinflammation",
+        "encephalitis"
+    ],
+    [
+        "influenza",
+        "influenza B"
+    ],
+    [
+        "influenza",
+        "influenza A"
+    ],
+    [
+        "influenza A",
+        "influenza A virus"
+    ],
+    [
+        "influenza A virus",
+        "influenza A"
+    ],
+    [
+        "influenza",
+        "H1N1"
+    ],
+    [
+        "H1N1",
+        "H1N1 influenza"
+    ],
+    [
+        "H1N1 influenza",
+        "H1N1"
+    ],
+    [
+        "cancer",
+        "breast cancer"
+    ],
+    [
+        "risk factors",
+        "liver disease"
+    ],
+    [
+        "sepsis",
+        "septic shock"
+    ],
+    [
+        "septic shock",
+        "sepsis"
+    ]
+]
