@@ -3,6 +3,7 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 import pandas as pd
 import numpy as np
@@ -47,84 +48,127 @@ print('Data loaded!')
 BACKGROUND_COLOR = '#1F2132'
 BOX_COLOR = '#262B3D'
 
+tab_style = {
+    'background-color' : BOX_COLOR,
+    'color' : '#fff',
+    'border' : 'none',
+    'font-family' : "Courier New",
+    'border-bottom' : '1px solid #fff',
+    'font-size' : '2.12rem',
+    'padding-bottom' : '0px',
+    'border-top' : '1px solid ' + BOX_COLOR
+}
+
+selected_style = tab_style.copy()
+selected_style['border-top'] = '1px solid #fff'
+
 #__Layout_______________
 app.layout = html.Div(children=[
 
     #Title Bar
-    html.Div([
-        html.Img(
-                src=app.get_asset_url('logo.png'),
-                height = 100,
-                style = {'margin-left':'25px', 'margin-top':'0px', 'padding-top':'0px'}
-            ),
-    ]),
-    html.Div([        
-        #Left panel
-        html.Div([
-            html.Div([
-                html.H1('Constellation', className = 'infobox_header'),
-                dcc.Graph(
-                    id = 'constellation',
-                    style = {'height':'55vh'},
-                ),
-                html.Br(),
+    html.Img(
+            src=app.get_asset_url('logo.png'),
+            height = 100,
+            style = {'margin-left':'25px', 'margin-top':'0px', 'padding-top':'0px'}
+    ),
+    dcc.Tabs(id = 'main_tabs', value = 'models', children = [
+        #explore tab
+        dcc.Tab(label = 'Explore', value = 'exploration', style = tab_style, selected_style = selected_style, children = [
+            html.Div([        
+                #Left panel
                 html.Div([
+                    html.Div(className = 'infobox', id='explanation_infobox', style = {'margin-bottom':'15px', 'font-size' : 16}, children = [
+                            html.H1('Launch Instructions', className = 'infobox_header'),
+                            html.P('''Welcome to Constellation! This dashboard is intended to use Natural Language Processing and Machine Learning to help Biomedical researchers 
+                            investigate a trove of almost 24,000 COVID-19 and infectious-disease-related articles. Below is your sky plot, showing each paper 
+                            as a star according to its importance in the corpus and its publish date. Click on a paper to see other papers with similar topics, explore
+                            different categories, and when you've found some documents you like, save them and use the summary extraction feature to get aquainted quickly.''',
+                            style = {'margin-bottom' : '8px'}),
+                            html.Button('Got It!', id = 'got_it', style = {'margin-bottom' : '8px', 'margin' : 'auto'}),
+                        ]),
                     html.Div([
-                        html.Label('Search'),
+                        html.H1('Constellation', className = 'infobox_header'),
+                        dcc.Graph(
+                            id = 'constellation',
+                            style = {'height':'55vh'},
+                        ),
                         html.Br(),
                         html.Div([
-                            dcc.Input(id="searchbar", type="text", placeholder="", debounce=True,
-                            style = {'margin-right' : '5px', 'height' : '36px','display' : 'inline-block', 'width':'80%',
-                                        'background-color' : BOX_COLOR, 'border-color' : '#fff','border-radius' : '2px', 'border-width' : '1px'}),
-                            #html.Button('Submit'),
-                        ], style = {'margin-top' : '0px', 'margin-bottom' : '15px'})
-                    ], className = 'column'),
+                            html.Div([
+                                html.Label('Search'),
+                                html.Br(),
+                                html.Div([
+                                    dcc.Input(id="searchbar", type="text", placeholder="", debounce=True,
+                                    style = {'margin-right' : '5px', 'height' : '36px','display' : 'inline-block', 'width':'80%',
+                                                'background-color' : BOX_COLOR, 'border-color' : '#fff','border-radius' : '2px', 'border-width' : '1px'}),
+                                    #html.Button('Submit'),
+                                ], style = {'margin-top' : '0px', 'margin-bottom' : '15px'})
+                            ], className = 'column'),
+                            html.Div([
+                                html.Label('Filters'),
+                                html.Div([
+                                    dcc.Dropdown(
+                                        options=[
+                                            {'label' : node_name, 'value' : node_name}
+                                            for node_name in filters                                    
+                                        ],
+                                        value=[],
+                                        multi=True,
+                                        id = 'filtersbar',
+                                        style = {'background-color' : BOX_COLOR, 'border-color' : '#fff', 'border-width' : '1px',
+                                            'font-family' : "Courier New", 'font-color' : '#fff', 'border-radius' : '2px',
+                                            'width' : '95%', 
+                                            'margin-left' : '0px', 'margin-right' : '0px',
+                                        }
+                                    ),
+                                ], id="wrapper", style = {'clear' : 'both', 'margin-bottom' : '15px'}),
+                            ],className = 'column'),
+                        ], className = 'row')                
+                    ], className = 'infobox'),
                     html.Div([
-                        html.Label('Filters'),
                         html.Div([
-                            dcc.Dropdown(
-                                options=[
-                                    {'label' : node_name, 'value' : node_name}
-                                    for node_name in filters                                    
-                                ],
-                                value=[],
-                                multi=True,
-                                id = 'filtersbar',
-                                style = {'background-color' : BOX_COLOR, 'border-color' : '#fff', 'border-width' : '1px',
-                                    'font-family' : "Courier New", 'font-color' : '#fff', 'border-radius' : '2px',
-                                    'width' : '95%', 
-                                    'margin-left' : '0px', 'margin-right' : '0px',
-                                }
-                            ),
-                        ], id="wrapper", style = {'clear' : 'both', 'margin-bottom' : '15px'}),
-                    ],className = 'column'),
-                ], className = 'row')                
-            ], className = 'infobox'),
+                            html.H1('Paper Information', className = 'infobox_header', style = {'float' : 'left', 'width' : '90%'}),
+                            html.Button(id = 'save_paper', children = 'Save Paper', style = {'font-family' : "Courier New", 'float' : 'right'}),
+                        ]),
+                        html.Div(style = {'clear' : 'both'}),
+                        html.Div(children = [], id = 'abstract_box', style = {'margin-left' : '20px', 'margin-right' :'20px'}),
+                    ], className='infobox', style = {'display': 'block', 'overflow': 'auto','margin-top' : '15px'})
+                ], className = 'column'),
+                #right panel
+                html.Div([
+                    html.Div([
+                        html.H1('Literature Suggestions', className = 'infobox_header'),
+                        html.Div(children = [], id = 'suggestions_list', style = {'margin-left' : '15px', 'margin-right' :'15px', 
+                            'overflow-y' : 'scroll', 'height' : '95%'}),
+                    ],
+                    className = 'infobox', style = {'height' : '86vh'})
+                ], className = 'column',), 
+            ], className = 'row', style = {'background-color' : BACKGROUND_COLOR, 'border' : 'none', 'padding' : '0px'}),
+        ]),
+        dcc.Tab(value = 'extract', label = 'Summarize', style = tab_style, selected_style = selected_style, children = [
+            #extract tab
+            html.Div(id = 'summary_infobox', className = 'infobox', style = {'height' : '90%', 'width' : '50%'}, children = [
+                #
+            ])
+        ]),
+        dcc.Tab(value = 'models', label = 'Models', style = tab_style, selected_style = selected_style, children = [
             html.Div([
-                html.H1('Paper Information', className = 'infobox_header'),
-                html.Div(children = [], id = 'abstract_box', style = {'margin-left' : '20px', 'margin-right' :'20px'}),
-            ], className='infobox', style = {'display': 'block', 'overflow': 'auto','margin-top' : '10px'})
-        ], className = 'column'),
-
-        #right panel
-        html.Div([
-            html.Div([
-                html.H1('Literature Suggestions', className = 'infobox_header'),
-                html.Div(children = [], id = 'suggestions_list', style = {'margin-left' : '20px', 'margin-right' :'20px', 
-                    'overflow-y' : 'scroll', 'height' : '95%'}),
-            ],
-            className = 'infobox', style = {'height' : '86vh'})
-        ], className = 'column',), 
-        
-    ], className = 'row'),
+                html.Div([
+                    html.Div([
+                        html.H1('Document Similarity and Categorization', className = 'infobox_header'),
+                        html.Iframe(src = app.get_asset_url('abstract_tfidf_vectorization.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
+                    ], className = 'infobox', style = {'width' : '50%'}),
+                ], className = 'columns'),
+            ], className = 'row'),
+        ])
+    ], style = {'margin-bottom' : '10px'}),  
 ])
 
 #%%
 #Literature suggestion fetching
 def row_to_text(row):
     return [
-        html.B(row['title'], style = {'font-size' : '1.8rem'}),
-        html.Br(),
+        html.H1(row['title'], style = {'font-size' : '2.13rem', 'margin-bottom' : '5px'}),
         html.P('{}, {} et al., {}'.format(row['pretty_date'], row['first_author'], row['source_x']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
         html.P('Category: {}'.format(row['category_description']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
@@ -180,14 +224,11 @@ def update_search_scores(search_value):
 
     _data['agg_score'] = np.exp(_data.norm_pagerank) + 3 * np.exp(_data.search_score)
 
-
-#%%
 def update_suggestion_list():
     return html.Ol([
         html.Li(children = row_to_text(row[1]), style = {'margin-bottom' : '30px'})
         for row in _data.nlargest(n = 40, columns = ['visible','agg_score'], keep = 'first').iterrows()
     ], style = {'list-style-type':'none'})
-
 
 @app.callback(
     Output('suggestions_list', 'children'),
@@ -210,7 +251,6 @@ def update_suggestions_callback(filter_values, search_value):
     return update_suggestion_list()
 
 #__Constellations______________
-#%%
 
 def get_top_sims(click_id):
 
@@ -239,7 +279,6 @@ def calc_constellation(click_id):
 
     return (edge_x, edge_y)
 
-
 def update_graph(constellation_data):
 
     graph_data = _data[_data['visible'] == True]
@@ -247,18 +286,23 @@ def update_graph(constellation_data):
     newfig = go.Figure(
         layout = dict(
                         margin = {'l': 5, 'b': 0, 't': 5, 'r': 20},
-                        font = {'size':12, 'family':'Courier New', 'color' : '#fff'},
+                        font = {'size':14, 'family':'Courier New', 'color' : '#fff'},
                         plot_bgcolor = BACKGROUND_COLOR,
                         paper_bgcolor = BOX_COLOR,
                         xaxis_title = 'Publish Date',
-                        yaxis_title = 'Impact',
+                        yaxis = dict(
+                            ticks = "outside", 
+                            tickcolor=BOX_COLOR, 
+                            ticklen=10, 
+                            showticklabels = False,
+                            title = 'Impact'),
                         showlegend = True,
                         uirevision = 'dont change',
                         legend_orientation = 'h',
                         legend = dict(
                             x = 0.5,
                             xanchor = 'center',
-                        )
+                        ),
                     ),
     )
 
@@ -318,8 +362,8 @@ def update_abstract_box(click_data):
         return [html.P('Select a paper from the constellation to learn more.')]
         
     #1 update abstract box
-    point = click_data['points'][0]
-    row = _data.loc[point['text']]
+    click_id = click_data['points'][0]['text']
+    row = _data.loc[click_id]
     new_children = row_to_text(row)
     new_children.extend([
         html.Br(),
@@ -328,6 +372,24 @@ def update_abstract_box(click_data):
         html.P(row['abstract'], style = {'font-family' : 'Arial'}),
     ])
     return new_children
+
+@app.callback(
+    Output('summary_infobox','children'),
+    [Input('save_paper','n_clicks')],
+    [State('constellation','clickData')]
+)
+def save_paper_callback(n_clicks, click_state):
+    pass
+
+@app.callback(
+    Output('explanation_infobox','style'),
+    [Input('got_it','n_clicks')]
+)
+def got_it_callback(n_clicks):
+    if not n_clicks is None and n_clicks > 0:
+        return {'display' : 'none'}
+    else:
+        raise PreventUpdate
 
 
 if __name__ == '__main__':
