@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import seaborn
-
+import plotly.express as px 
+#%%
 def import_data(filename):
 
     lit_data = pd.read_csv(filename)
@@ -28,17 +29,15 @@ def import_data(filename):
 
     #2. make colorscale
     cateogories = list(lit_data['category_description'].value_counts().sort_values(ascending = False).index)
-    color_scale = seaborn.color_palette("bright")[:10]
-    scaled_scale = (np.array(color_scale) * 255).astype(np.int32).astype('str')
-    rgb_codes = ['rgb({},{},{})'.format(r, g, b) for (r,g,b) in scaled_scale]
-    color_pairs = list(zip(cateogories, rgb_codes))
+    color_scale = px.colors.qualitative.Light24[10:20] #seaborn.color_palette("bright")[:10]
+    #scaled_scale = (np.array(color_scale) * 255).astype(np.int32).astype('str')
+    #rgb_codes = ['rgb({},{},{})'.format(r, g, b) for (r,g,b) in scaled_scale]
+    #color_pairs = list(zip(cateogories, rgb_codes))
+    color_pairs = list(zip(cateogories, color_scale))
     color_pairs_df = pd.DataFrame(color_pairs, columns = ['category_description', 'color_code'])
 
     lit_data = lit_data.merge(color_pairs_df, how = 'left')
     lit_data = lit_data.set_index(sim_df.index)
-    lit_data['search_score'] = 0
-    lit_data['agg_score'] = np.exp(lit_data['norm_pagerank']) + np.exp(lit_data['search_score'])
-    lit_data['visible'] = True
 
     return lit_data, sim_df
 

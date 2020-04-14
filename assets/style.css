@@ -119,6 +119,7 @@ p {
   margin-top: 0; 
   color: #fff;
   font-family: "Courier New";
+  font-size: 1.8rem;
 }
 
 b {
@@ -147,7 +148,7 @@ blockquote {
     border-style: solid;
     border-width: 1px;
     border-radius: 2px;
-    margin: 10px;
+    margin: 15px;
 }
 
 .infobox_header {
@@ -156,9 +157,8 @@ blockquote {
   border-bottom-width: 1px;
   padding-top: 0px;
   margin-top: 0px;
-  font-size : 2.2rem
+  font-size : 2.4rem
 }
-
 
 /* Links
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
@@ -178,6 +178,7 @@ input[type="submit"],
 input[type="reset"],
 input[type="button"] {
   display: inline-block;
+  background-color: #1F2132;
   height: 36px;
   padding: 0 30;
   color: #fff;
@@ -203,18 +204,15 @@ input[type="button"]:hover,
 button:focus,
 input[type="submit"]:focus,
 input[type="reset"]:focus,
-input[type="button"]:focus {
-  color: #333;
-  border-color: #888;
-  outline: 0; }
+input[type="button"]:focus,
 .button.button-primary,
 button.button-primary,
 input[type="submit"].button-primary,
 input[type="reset"].button-primary,
 input[type="button"].button-primary {
   color: #FFF;
-  background-color: #33C3F0;
-  border-color: #33C3F0; }
+  background-color: #1F2132;
+  border-color: #1F2132; }
 .button.button-primary:hover,
 button.button-primary:hover,
 input[type="submit"].button-primary:hover,
@@ -224,10 +222,7 @@ input[type="button"].button-primary:hover,
 button.button-primary:focus,
 input[type="submit"].button-primary:focus,
 input[type="reset"].button-primary:focus,
-input[type="button"].button-primary:focus {
-  color: #FFF;
-  background-color: #1EAEDB;
-  border-color: #1EAEDB; }
+input[type="button"].button-primary:focus,
 
 
 /* Forms
@@ -237,6 +232,7 @@ input[type="button"].button-primary:focus {
   border-color: #fff;
   border-width: 1px;
   color: #fff;
+  font-size: 1.6rem;
 }
 
 #wrapper .VirtualizedSelectFocusedOption {
@@ -302,6 +298,7 @@ select:focus {
 label {
   color: #fff;
   font-family: "Courier New";
+  font-size: 2.0rem;
 }
 
 legend {
@@ -434,6 +431,26 @@ there.
 /* Larger than Desktop HD */
 @media (min-width: 1200px) {}
 
-.Select-input input {
-  border: none;
+
+select{
+  background-color: #262B3D;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 1.8rem;
 }
+
+select:focus {
+  border: 2px solid #fff;
+  border-radius: 3px; 
+}
+
+.select option {
+  background-color: #1F2132;
+  color: #fff;
+}
+
+.select option:focus {
+  background-color: #262B3D;
+}
+

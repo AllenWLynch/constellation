@@ -2,7 +2,7 @@
 <html>
 <head><meta charset="utf-8" />
 
-<title>abstract_tfidf_vectorization</title>
+<title>network_analysis</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
@@ -13092,17 +13092,10 @@ div#notebook {
 <div class="text_cell_render border-box-sizing rendered_html">
 <hr>
 
-<h1 id="Objective:-Vectorize-abstracts-for-quick-similarity-comparisons-between-papers"><em>Objective:</em> Vectorize abstracts for quick similarity comparisons between papers<a class="anchor-link" href="#Objective:-Vectorize-abstracts-for-quick-similarity-comparisons-between-papers">&#182;</a></h1><h1 id="Method:-TF-IDF-Vectorization"><em>Method:</em> TF-IDF Vectorization<a class="anchor-link" href="#Method:-TF-IDF-Vectorization">&#182;</a></h1><p><hr>
-There are a great variety of successful document-embedding techniques, especially those emerging out of the supervised realm lead by Google's Universal Sentence Encoder. Those embedding models work well for standard english text, but will not transfer well to the biomedical domain out-of-the-box. Rather than retrain one of these complicated models, made complicated by the fact that the biomedical domain does only has a small semantic similarity dataset to benchmark and it cannot be used to compare abstracts, I will rely on research that has shown newer supervised methods do not significantly outperform BOW+TF-IDF models in unsupervised pharase similarity tasks.</p>
-<p>With this motivation, I will create a model for abstract similarity using the following stages:</p>
-<ol>
-<li>Word-level tokenization</li>
-<li>Normalization: lowercasing, punctuation removal, stopword removal</li>
-<li>Stemmatization</li>
-<li>Term frequency counting (TF)</li>
-<li>Doc frequency weighting (IDF)</li>
-</ol>
-<p>Biological stopwords will be provided courtesy of NCBI, and I will merge that set with the set of common english stopwords for coverage.</p>
+<h1 id="Objective:-Find-importance-of-literature-articles-so-users-can-focus-on-high-impact-literature."><em>Objective:</em> Find importance of literature articles so users can focus on high-impact literature.<a class="anchor-link" href="#Objective:-Find-importance-of-literature-articles-so-users-can-focus-on-high-impact-literature.">&#182;</a></h1><h1 id="Method:-PageRank-over-the-Author-Journal-Citation-network"><em>Method:</em> PageRank over the Author-Journal-Citation network<a class="anchor-link" href="#Method:-PageRank-over-the-Author-Journal-Citation-network">&#182;</a></h1><hr>
+
+<p>My literature impact model examines the papers in the corpus as linked in a large network of authors, papers, and journals. A paper connects to each of its authors, and the authors to each of their papers. A journal and a paper also share this bi-directional relationship, whereas the relationship between papers is one-directional: through a citation. With this network layout, shown below, I can employ the PageRank algorithm to find important nodes through "voting", where the importance of journals, authors, and papers depends on their connectedness to other imporant nodes. The inclusion of Author-Paper and Journal-Paper relationships are important, since more recent papers will have fewer citations than older papers. That does not make newer papers less impactful, but their imporatance will be more dependent on the impact of their publishing journal and authors.</p>
+<p><img src = "citation_net_model.png"></p>
 
 </div>
 </div>
@@ -13112,20 +13105,13 @@ There are a great variety of successful document-embedding techniques, especiall
 <div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">sklearn</span> <span class="k">as</span> <span class="nn">sk</span>
-<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">manifold</span>
-<span class="kn">from</span> <span class="nn">sklearn</span> <span class="kn">import</span> <span class="n">cluster</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">sent_tokenize</span><span class="p">,</span> <span class="n">word_tokenize</span>
-<span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="kn">import</span> <span class="n">stopwords</span>
-<span class="kn">from</span> <span class="nn">nltk.stem.snowball</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span>
-<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">punctuation</span>
-<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
 <span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">sparse</span>
-<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">color_codes</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">seaborn</span>
+<span class="n">seaborn</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">color_codes</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 <span class="n">data_dir</span> <span class="o">=</span> <span class="s1">&#39;D:\datasets\covid&#39;</span>
 </pre></div>
 
@@ -13134,16 +13120,73 @@ There are a great variety of successful document-embedding techniques, especiall
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Extracting-network-data-from-article-schema">Extracting network data from article schema<a class="anchor-link" href="#Extracting-network-data-from-article-schema">&#182;</a></h3><p>First, I transformed the full-text json objects into a more condensed format, keeping only information relevant to peicing together the citation network.</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;covid_data&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata.csv&#39;</span><span class="p">))</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">get_name_id</span><span class="p">(</span><span class="n">author_metadata</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">first_initial</span> <span class="o">=</span> <span class="n">author_metadata</span><span class="p">[</span><span class="s1">&#39;first&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> 
+    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+        <span class="n">first_initial</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">middle_intitial</span> <span class="o">=</span> <span class="n">author_metadata</span><span class="p">[</span><span class="s1">&#39;middle&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">author_metadata</span><span class="p">[</span><span class="s1">&#39;middle&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="n">author_metadata</span><span class="p">[</span><span class="s1">&#39;last&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_initial</span> <span class="o">+</span> <span class="n">middle_intitial</span> <span class="o">+</span> <span class="n">last</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;N.A&#39;</span>
+    <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">, </span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last</span><span class="p">,</span> <span class="n">first_initial</span><span class="p">,</span> <span class="n">middle_intitial</span><span class="p">)</span>
 
-<span class="n">data</span><span class="p">[</span><span class="s1">&#39;abstract_len&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;abstract&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">len</span><span class="p">()</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[(</span><span class="n">data</span><span class="o">.</span><span class="n">abstract_len</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">)]</span>
-<span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+<span class="k">def</span> <span class="nf">get_paper_id</span><span class="p">(</span><span class="n">bib_metadata</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">bib_metadata</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">if</span> <span class="n">bib_metadata</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="kc">None</span>
+
+<span class="k">def</span> <span class="nf">convert_json_to_network_data</span><span class="p">(</span><span class="n">json_str</span><span class="p">):</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+    <span class="n">output_schema</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;paper_id&#39;</span> <span class="p">:</span> <span class="n">schema</span><span class="p">[</span><span class="s1">&#39;paper_id&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;authors&#39;</span> <span class="p">:</span> <span class="p">[</span>
+            <span class="n">get_name_id</span><span class="p">(</span><span class="n">author_metadata</span><span class="p">)</span> <span class="k">for</span> <span class="n">author_metadata</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">]</span>
+        <span class="p">],</span>
+        <span class="s1">&#39;citations&#39;</span> <span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s1">&#39;paper&#39;</span> <span class="p">:</span> <span class="n">get_paper_id</span><span class="p">(</span><span class="n">bib_metadata</span><span class="p">),</span>
+                <span class="s1">&#39;authors&#39;</span> <span class="p">:</span> <span class="p">[</span>
+                    <span class="n">get_name_id</span><span class="p">(</span><span class="n">author_metadata</span><span class="p">)</span> <span class="k">for</span> <span class="n">author_metadata</span> <span class="ow">in</span> <span class="n">bib_metadata</span><span class="p">[</span><span class="s1">&#39;authors&#39;</span><span class="p">]</span>
+                <span class="p">],</span>
+                <span class="s1">&#39;source&#39;</span> <span class="p">:</span> <span class="n">bib_metadata</span><span class="p">[</span><span class="s1">&#39;venue&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="kc">None</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">bibkey</span><span class="p">,</span> <span class="n">bib_metadata</span><span class="p">)</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s1">&#39;bib_entries&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">schema</span><span class="p">[</span><span class="s1">&#39;paper_id&#39;</span><span class="p">],</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">output_schema</span><span class="p">))</span>
+
+<span class="n">full_text_dirs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;D:</span><span class="se">\\</span><span class="s1">datasets</span><span class="se">\\</span><span class="s1">covid</span><span class="se">\\</span><span class="s1">covid_data</span><span class="se">\\</span><span class="s1">noncomm_use_subset</span><span class="se">\\</span><span class="s1">noncomm_use_subset&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;D:</span><span class="se">\\</span><span class="s1">datasets</span><span class="se">\\</span><span class="s1">covid</span><span class="se">\\</span><span class="s1">covid_data</span><span class="se">\\</span><span class="s1">custom_license</span><span class="se">\\</span><span class="s1">custom_license&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;D:</span><span class="se">\\</span><span class="s1">datasets</span><span class="se">\\</span><span class="s1">covid</span><span class="se">\\</span><span class="s1">covid_data</span><span class="se">\\</span><span class="s1">comm_use_subset</span><span class="se">\\</span><span class="s1">comm_use_subset&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;D:</span><span class="se">\\</span><span class="s1">datasets</span><span class="se">\\</span><span class="s1">covid</span><span class="se">\\</span><span class="s1">covid_data</span><span class="se">\\</span><span class="s1">biorxiv_medrxiv</span><span class="se">\\</span><span class="s1">biorxiv_medrxiv&#39;</span>
+<span class="p">]</span>
+
+<span class="n">network_data</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">successes</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">archive_dir</span> <span class="ow">in</span> <span class="n">full_text_dirs</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">)):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">archive_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">paper_text</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="n">paper_data</span> <span class="o">=</span> <span class="n">convert_json_to_network_data</span><span class="p">(</span><span class="n">paper_text</span><span class="p">)</span>
+            <span class="n">network_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">paper_data</span><span class="p">)</span>
+            <span class="n">successes</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">Conversions: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">successes</span><span class="p">)),</span> <span class="n">end</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">err</span>
 </pre></div>
 
     </div>
@@ -13156,52 +13199,12 @@ There are a great variety of successful document-embedding techniques, especiall
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[2]:</div>
+    <div class="prompt"></div>
 
 
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(34301, 16)</pre>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Conversions: 29315</pre>
 </div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;./stopwords.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">bio_stopwords</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()]</span>
-
-<span class="n">all_stopwords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">stopwords</span><span class="o">.</span><span class="n">words</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">bio_stopwords</span><span class="p">)))</span>
-<span class="nb">len</span><span class="p">(</span><span class="n">all_stopwords</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">bio_stopwords</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[3]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(376, 313)</pre>
-</div>
-
 </div>
 
 </div>
@@ -13211,14 +13214,35 @@ There are a great variety of successful document-embedding techniques, especiall
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Text-normalization-for-TF-IDF-model">Text normalization for TF-IDF model<a class="anchor-link" href="#Text-normalization-for-TF-IDF-model">&#182;</a></h3><ol>
-<li>Tokenize abstracts into sentences, then words</li>
-<li>Lowercase only the first letter in each sentence <em>if and only if</em> that word is not fully uppercase. (This prevents over-normalization of proper nouns or accronyms which are common in biological text.)</li>
-<li>Filter out punctuation</li>
-<li>Filter out stopwords</li>
-</ol>
-<h5 id="Normalization-example:">Normalization example:<a class="anchor-link" href="#Normalization-example:">&#182;</a></h5><p>BRCA1 is an important tumor suppressor. -&gt; [BRCA1, is, an, important, tumor, suppressor]<br>
-This experiment tests BRCA1 tumor suppressing ability. -&gt; [this, experiment, tests, BRCA1, tumor ...]</p>
+<p>Then, using the network data generated, I merged the network data of each paper with its respective metadata and generated the connections for each paper.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;covid_data&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata.csv&#39;</span><span class="p">))</span>
+
+<span class="n">network_metadata</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,[</span><span class="s1">&#39;sha&#39;</span><span class="p">,</span><span class="s1">&#39;source_x&#39;</span><span class="p">,</span><span class="s1">&#39;title&#39;</span><span class="p">]]</span>
+<span class="n">network_metadata</span> <span class="o">=</span> <span class="n">network_metadata</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+<span class="n">connections_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">network_data</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sha&#39;</span><span class="p">,</span><span class="s1">&#39;json_str&#39;</span><span class="p">])</span>
+<span class="n">network_metadata</span> <span class="o">=</span> <span class="n">network_metadata</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>\
+    <span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">connections_df</span><span class="p">,</span> <span class="n">on</span> <span class="o">=</span> <span class="s1">&#39;sha&#39;</span><span class="p">,</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;inner&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Constructing-Edgelist">Constructing Edgelist<a class="anchor-link" href="#Constructing-Edgelist">&#182;</a></h2><p>The next function takes the metadata and network data for each paper and generates all possible connections between nodes. This list of connections forms the edgelist, and duplicate connections are dropped.</p>
 
 </div>
 </div>
@@ -13228,146 +13252,135 @@ This experiment tests BRCA1 tumor suppressing ability. -&gt; [this, experiment, 
 <div class="prompt input_prompt">In&nbsp;[4]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">stemmer</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">extract_relationships</span><span class="p">(</span><span class="n">row</span><span class="p">):</span>
+    <span class="n">paper_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">journal</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;source_x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;json_str&#39;</span><span class="p">])</span>
+    
+    <span class="n">connections</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">journal</span><span class="p">:</span>
+        <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">journal</span><span class="p">,</span> <span class="n">paper_id</span><span class="p">,</span> <span class="s1">&#39;journal -&gt; paper&#39;</span><span class="p">))</span>
+        <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">paper_id</span><span class="p">,</span> <span class="n">journal</span><span class="p">,</span> <span class="s1">&#39;paper -&gt; journal&#39;</span><span class="p">))</span>    
+    <span class="k">for</span> <span class="n">author</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s1">&#39;authors&#39;</span><span class="p">]:</span>
+        <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">author</span><span class="p">,</span> <span class="n">paper_id</span><span class="p">,</span> <span class="s1">&#39;author -&gt; paper&#39;</span><span class="p">))</span>
+        <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">paper_id</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="s1">&#39;paper -&gt; author&#39;</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">cited_paper</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s1">&#39;citations&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">cited_paper</span><span class="p">[</span><span class="s1">&#39;paper&#39;</span><span class="p">]:</span>
+            <span class="n">cited_paper_id</span> <span class="o">=</span> <span class="n">cited_paper</span><span class="p">[</span><span class="s1">&#39;paper&#39;</span><span class="p">]</span>
+            <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">paper_id</span><span class="p">,</span> <span class="n">cited_paper_id</span><span class="p">,</span> <span class="s1">&#39;paper -&gt; paper&#39;</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">cited_author</span> <span class="ow">in</span> <span class="n">cited_paper</span><span class="p">[</span><span class="s1">&#39;authors&#39;</span><span class="p">]:</span>
+                <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cited_paper_id</span><span class="p">,</span> <span class="n">cited_author</span><span class="p">,</span> <span class="s1">&#39;paper -&gt; author&#39;</span><span class="p">))</span>
+                <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cited_author</span><span class="p">,</span> <span class="n">cited_paper_id</span><span class="p">,</span> <span class="s1">&#39;author -&gt; paper&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">cited_paper</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]:</span>
+                <span class="n">cited_source</span> <span class="o">=</span> <span class="n">cited_paper</span><span class="p">[</span><span class="s1">&#39;source&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cited_source</span><span class="p">,</span> <span class="n">cited_paper_id</span><span class="p">,</span> <span class="s1">&#39;journal -&gt; paper&#39;</span><span class="p">))</span>
+                <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cited_paper_id</span><span class="p">,</span> <span class="n">cited_source</span><span class="p">,</span> <span class="s1">&#39;paper -&gt; journal&#39;</span><span class="p">))</span> 
+                
+    <span class="k">return</span> <span class="n">connections</span>
 
-<span class="k">def</span> <span class="nf">tokenize_and_lowercase</span><span class="p">(</span><span class="n">doc_str</span><span class="p">):</span>
-    <span class="k">return</span> <span class="p">[</span> 
-        <span class="n">word</span> <span class="k">if</span> <span class="p">(</span><span class="n">word</span><span class="o">.</span><span class="n">isupper</span><span class="p">()</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">word</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">sent</span> <span class="ow">in</span> <span class="n">sent_tokenize</span><span class="p">(</span><span class="n">doc_str</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">word_tokenize</span><span class="p">(</span><span class="n">sent</span><span class="p">))</span>
-        <span class="k">if</span> <span class="n">word</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">punctuation</span>
-    <span class="p">]</span>
-
-<span class="k">def</span> <span class="nf">all_preprocess</span><span class="p">(</span><span class="n">doc_str</span><span class="p">):</span>
-    <span class="k">return</span> <span class="p">[</span>
-        <span class="n">stemmer</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">tokenize_and_lowercase</span><span class="p">(</span><span class="n">doc_str</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">word</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_stopwords</span>
-    <span class="p">]</span>
-
-<span class="n">count_vectorizer</span> <span class="o">=</span> <span class="n">sk</span><span class="o">.</span><span class="n">feature_extraction</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">CountVectorizer</span><span class="p">(</span>
-    <span class="nb">input</span> <span class="o">=</span> <span class="s1">&#39;content&#39;</span><span class="p">,</span>
-    <span class="n">analyzer</span> <span class="o">=</span> <span class="s1">&#39;word&#39;</span><span class="p">,</span>
-    <span class="n">preprocessor</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">all_preprocess</span><span class="p">,</span>
-    <span class="n">min_df</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">term_counts</span> <span class="o">=</span> <span class="n">count_vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;abstract&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
-
-<span class="n">tf_idf_vectorizer</span> <span class="o">=</span> <span class="n">sk</span><span class="o">.</span><span class="n">feature_extraction</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">TfidfTransformer</span><span class="p">(</span>
-    <span class="n">norm</span> <span class="o">=</span> <span class="s1">&#39;l2&#39;</span><span class="p">,</span>
-    <span class="n">use_idf</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">smooth_idf</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">doc_models</span> <span class="o">=</span> <span class="n">tf_idf_vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">term_counts</span><span class="p">)</span>
-<span class="n">doc_models</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">connections</span> <span class="o">=</span> <span class="n">network_metadata</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span> <span class="p">:</span> <span class="n">extract_relationships</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[4]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(34301, 33694)</pre>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Similarity-Construction">Similarity Construction<a class="anchor-link" href="#Similarity-Construction">&#182;</a></h3><p>With the TF-IDF vectors of 34301 abstracts calculated with 33694 unique terms, the similarity matrix between abstracts can be constructed with the dot product. Since the document vectors are l2-normalized, this dot product will give inter-document cosine similarities.</p>
-<p>Constructing a similarity matrix for that many abstracts is a memory-intensive process, so before doing so, I will filter down to only include abstracts without important data missing and which have a full text available for analysis.</p>
-
-</div>
-</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">doc_models_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">doc_models</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tf_idf_model&#39;</span><span class="p">])</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">edges_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">connections</span><span class="o">.</span><span class="n">explode</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">),</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;src&#39;</span><span class="p">,</span><span class="s1">&#39;dest&#39;</span><span class="p">,</span><span class="s1">&#39;relationship&#39;</span><span class="p">])</span>\
+    <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
 
-<span class="n">interesting_articles</span> <span class="o">=</span> <span class="n">data</span>\
-    <span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;abstract&#39;</span><span class="p">,</span> <span class="s1">&#39;title&#39;</span><span class="p">,</span><span class="s1">&#39;has_full_text&#39;</span><span class="p">,</span><span class="s1">&#39;publish_time&#39;</span><span class="p">,</span> <span class="s1">&#39;authors&#39;</span><span class="p">])</span>
-<span class="n">interesting_articles</span> <span class="o">=</span> <span class="n">interesting_articles</span><span class="p">[</span><span class="n">interesting_articles</span><span class="o">.</span><span class="n">has_full_text</span><span class="p">]</span>
-<span class="n">interesting_articles</span> <span class="o">=</span> <span class="n">interesting_articles</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">doc_models_df</span><span class="p">,</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span>
-
-<span class="n">doc_matrix</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="o">*</span><span class="n">interesting_articles</span><span class="p">[</span><span class="s1">&#39;tf_idf_model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">])</span>
-<span class="n">doc_matrix</span><span class="o">.</span><span class="n">shape</span>
+<span class="n">cite_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">from_pandas_edgelist</span><span class="p">(</span><span class="n">edges_df</span><span class="p">,</span> <span class="n">source</span> <span class="o">=</span> <span class="s1">&#39;src&#39;</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="s1">&#39;dest&#39;</span><span class="p">,</span> <span class="n">edge_attr</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[5]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(23975, 33694)</pre>
 </div>
-
-</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>PageRank implemented by the NetworkX package</p>
 
 </div>
 </div>
-
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">cosine_sims</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">doc_matrix</span><span class="p">,</span> <span class="n">doc_matrix</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span>
-<span class="n">cosine_sims</span><span class="o">.</span><span class="n">shape</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">page_ranks</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">pagerank</span><span class="p">(</span><span class="n">cite_graph</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.85</span><span class="p">)</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="Transforming-pagerank-results-and-merging-with-paper-metadata">Transforming pagerank results and merging with paper metadata<a class="anchor-link" href="#Transforming-pagerank-results-and-merging-with-paper-metadata">&#182;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">edges_df</span><span class="p">[[</span><span class="s1">&#39;type1&#39;</span><span class="p">,</span><span class="s1">&#39;type2&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">edges_df</span><span class="p">[</span><span class="s1">&#39;relationship&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; -&gt; &#39;</span><span class="p">,</span> <span class="n">expand</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span>
 
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">edges_df</span><span class="p">[[</span><span class="s1">&#39;src&#39;</span><span class="p">,</span><span class="s1">&#39;type1&#39;</span><span class="p">]]</span>
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;src&#39;</span><span class="p">:</span><span class="s1">&#39;node&#39;</span><span class="p">,</span><span class="s1">&#39;type1&#39;</span> <span class="p">:</span> <span class="s1">&#39;type&#39;</span><span class="p">})</span>
 
-<div class="output_area">
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edges_df</span><span class="p">[[</span><span class="s1">&#39;dest&#39;</span><span class="p">,</span><span class="s1">&#39;type2&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+    <span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type2&#39;</span><span class="p">:</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;dest&#39;</span><span class="p">:</span><span class="s1">&#39;node&#39;</span><span class="p">}))</span>
 
-    <div class="prompt output_prompt">Out[6]:</div>
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+</pre></div>
 
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(23975, 23975)</pre>
+    </div>
+</div>
 </div>
 
 </div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pagerank_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">page_ranks</span><span class="o">.</span><span class="n">items</span><span class="p">()),</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="s1">&#39;pagerank&#39;</span><span class="p">])</span>
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pagerank_df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;node&#39;</span><span class="p">),</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="n">nodes</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;paper&#39;</span><span class="p">]</span>
 
+<span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;node&#39;</span> <span class="p">:</span> <span class="s1">&#39;title_lower&#39;</span><span class="p">})</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">interesting_lit</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">))</span>
+<span class="n">interesting_lit</span><span class="p">[</span><span class="s1">&#39;title_lower&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">interesting_lit</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+<span class="n">interesting_lit</span> <span class="o">=</span> <span class="n">interesting_lit</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">on</span> <span class="o">=</span> <span class="s1">&#39;title_lower&#39;</span><span class="p">,</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">interesting_lit</span> <span class="o">=</span> <span class="n">interesting_lit</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">])</span>
+</pre></div>
+
+    </div>
 </div>
 </div>
 
@@ -13375,79 +13388,86 @@ This experiment tests BRCA1 tumor suppressing ability. -&gt; [this, experiment, 
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<hr>
-
-<h1 id="Objective:-Cluster-papers-based-on-TF-IDF-similarity-matrix"><em>Objective:</em> Cluster papers based on TF-IDF similarity matrix<a class="anchor-link" href="#Objective:-Cluster-papers-based-on-TF-IDF-similarity-matrix">&#182;</a></h1><h1 id="Method:-Spectral-Clustering"><em>Method:</em> Spectral Clustering<a class="anchor-link" href="#Method:-Spectral-Clustering">&#182;</a></h1><p><hr>
-The similarity matrix computed with the TF-IDF abstract vectors can be viewed as a weighted adjacency matrix for the graph of all papers, with more similar papers being more strongly-connected. By applying eigenvector decomposition to this adjacency matrix, one can transform the matrix from similarity space to a space where more similar papers are grouped closer together, allowing for the application of clustering algorithms, such as k-means.</p>
-<p>I will use k-means to discover the underlying distribution of the similarity data, if any, and to group papers for analysis.</p>
-
+<h3 id="Saving-results">Saving results<a class="anchor-link" href="#Saving-results">&#182;</a></h3>
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[30]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">interesting_lit</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">),</span> <span class="n">index</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Spectral-embedding">Spectral embedding<a class="anchor-link" href="#Spectral-embedding">&#182;</a></h3><p>First, I decomposed my similarity matrix, found by constructing a nearest neighbors graph. In this case I specified that each node may have 100 neighbors.</p>
+<h3 id="Analyzing-results-of-pagerank">Analyzing results of pagerank<a class="anchor-link" href="#Analyzing-results-of-pagerank">&#182;</a></h3><p>The pagerank of individual papers are difficult to assess, but I wanted the resultant pageranks to follow a normal distribution for interpretability by the user. I also wished pagerank values to express that most papers are average, while some are good and some are bad. As seen below, the log of my pagerank scores are beautifully normal, so I intent to present the 0-1 log normalized pagerank to my users.</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">MinMaxScaler</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">spectral_embedding</span> <span class="o">=</span> <span class="n">manifold</span><span class="o">.</span><span class="n">SpectralEmbedding</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">affinity</span> <span class="o">=</span> <span class="s2">&quot;precomputed&quot;</span><span class="p">,</span>
-    <span class="n">n_neighbors</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>\
-    <span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">cosine_sims</span><span class="p">)</span>
-<span class="n">spectral_embedding</span><span class="o">.</span><span class="n">shape</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pageranks_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;pagerank&#39;</span> <span class="p">:</span> <span class="n">MinMaxScaler</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pagerank</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,),</span>
+    <span class="s1">&#39;Normalization&#39;</span> <span class="p">:</span> <span class="s1">&#39;None&#39;</span><span class="p">})</span>
+
+<span class="n">pageranks_df_2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s1">&#39;pagerank&#39;</span> <span class="p">:</span> <span class="n">MinMaxScaler</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pagerank</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,),</span>
+    <span class="s1">&#39;Normalization&#39;</span> <span class="p">:</span> <span class="s1">&#39;Log&#39;</span><span class="p">})</span>
+
+<span class="n">pg_df</span> <span class="o">=</span> <span class="n">pageranks_df</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pageranks_df_2</span><span class="p">)</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[7]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>(23975, 10)</pre>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Elbow-Plot">Elbow Plot<a class="anchor-link" href="#Elbow-Plot">&#182;</a></h3><p>In order to choose the optimal amount of clusters to apply to the data, I employed an Elbow Plot. Though the number of clusters used is recommended to be the same as the number of embedded dimensions when performing spectral clustering, I simply wanted to verify the fit with varying k.</p>
-
-</div>
-</div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">cluster_results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">20</span><span class="p">):</span>
-    <span class="n">clusters</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">KMeans</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">spectral_embedding</span><span class="p">)</span>
-    <span class="n">cluster_results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">clusters</span><span class="o">.</span><span class="n">inertia_</span><span class="p">))</span>
-<span class="n">cluster_results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cluster_results</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;K&#39;</span><span class="p">,</span><span class="s1">&#39;Distortion&#39;</span><span class="p">])</span>
-
-<span class="n">sns</span><span class="o">.</span><span class="n">relplot</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="n">cluster_results_df</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;K&#39;</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="s1">&#39;Distortion&#39;</span><span class="p">,</span> <span class="n">kind</span> <span class="o">=</span> <span class="s1">&#39;line&#39;</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">seaborn</span><span class="o">.</span><span class="n">FacetGrid</span><span class="p">(</span><span class="n">pg_df</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="s1">&#39;Normalization&#39;</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">seaborn</span><span class="o">.</span><span class="n">distplot</span><span class="p">,</span> <span class="s1">&#39;pagerank&#39;</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13466,7 +13486,7 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>&lt;seaborn.axisgrid.FacetGrid at 0x1a6580133c8&gt;</pre>
+<pre>&lt;seaborn.axisgrid.FacetGrid at 0x14c98ea32e8&gt;</pre>
 </div>
 
 </div>
@@ -13479,7 +13499,7 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 
 
 <div class="output_png output_subarea ">
-<img src="data:image/png;base64,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ozt+/DgbNmxgzJgxlvHy8nIGDhxIQkIC69at48KFC5aVidVw4cIFbrnlFt58800++ugjPv30U7Zt22YZb279ObVkZWVRVVXFxIkT6z1ujc/n5ZdfZuTIkZbtlnwGja23p0aewMBAbr31VgCKi4tJTExk7NixDfbT6/U8/PDDfPHFF/j7+zeYmmmtPIWFhYSGhvLKK6+wdu1adu3axb/+9a96+zS2TmFrZ/nV8ePH+f7774mLi7vifmp9NtdDCldFR44cYfbs2Tz11FP1/gJ37tyZ9957jz59+uDg4MDs2bP597//rVqO4cOHs3z5ctzd3fH29mb69On1fl5z68+p5dNPP+X+++9v8Li1Px9o2WdwpcfU/pyMRiP33nsvd955JzfffHOD8TfffJMRI0ag0+n485//zNatW1XJ0b17d958800MBgOdOnXinnvuafA7sfa/o+TkZO6++26cnJyuOG6tz+ZqSOGqJDs7m/vuu48nnniCadOm1Rs7c+ZMvaMDRVEsR01q2LVrF9u3b2/0512+vtzl68+pobq6mp07d3LHHXc0GLP25wMt+wx+u95eY89pTUePHuWuu+5i2rRpzJ07t8F4aWkpH330kWVbURTs7e1VyfLTTz+xcePGej/r8t9JY+sUqiUzM5NJkyZdccyan83VkMJVwdmzZ5k7dy4rVqxg8uTJDcZdXFx49dVXOXXqFIqikJiYyPjx41XLU1payvLly7l48SJlZWWsW7eu3s8bNmwYx44d48SJE9TV1fHll1/WW39ODT/99BM9e/bE1dW1wZi1Px9o2WfQ2Hp7aigrK+NPf/oTjz76KLNnz77ic1xdXXn//fctV5x88sknqn1OiqLwyiuvUFJSQk1NDcnJyQ1+VmPrFKqhuLiYqqoqunfvfsVxa342V8Ump+rauRdffFEJCQlRpk6davlfUlKS8uc//1nZt2+foiiKkp6erkyePFmJiIhQFixYoFy8eFHVTCtXrlQmTJigREREKB999JGiKIoydepU5eeff1YURVGysrKUKVOmKBEREcrLL7+smM1mVfOsX79eeeyxx+o9ZovP5/bbb7ec+W7sM1i4cKGyefNmRVEU5fTp08of//hHZeLEicrs2bOV8+fPq5JnzZo1yqBBg+r9G1q1alWDPDt37lRiYmKUCRMmKA8++KBy4cIFVfIoiqJ88sknysSJE5Xx48crr776quU5v/295eTkKHfeeacSGRmpPP744636e/ttlr179yozZsxo8BxrfjbXQlZ8EEIIK5EpBSGEsBIpXCGEsBIpXCGEsBIpXCGEsBIpXCGEsBIpXCEuc/r0aYYPH17vsa+++oqbb7653hdIhLha6n59R4h24NNPP+Wtt97io48+YuDAgbaOI9owKVwhmvDuu+/y+eefk5SURLdu3WwdR7RxMqUgRCOWL1/Oa6+9xj333CNlK1qFFK4QV1BRUcHhw4d59913ee211zh48KCtI4l2QApXiCtwcXHh7bffZsyYMTzwwAM88sgjnD9/3taxRBsnhSvEFdjZ2eHo6AjAnDlz6Nu3L0888USDVQ6EuBpSuEI0Q6fTsWzZMo4ePcqqVatsHUe0YXK3MCGEsBI5whVCCCuRwhVCCCuRwhVCCCuRwhVCCCuRwhVCCCuRwhVCCCuRwhVCCCuRwhVCCCv5/8r7Z0myTBr5AAAAAElFTkSuQmCC
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAADMCAYAAAA8nNe2AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4xLjMsIGh0dHA6Ly9tYXRwbG90bGliLm9yZy+AADFEAAAgAElEQVR4nO3deXhU5d0+8PvMTLZJwhYSCLuCEBYRBJUIBBEMgSQG0EspVH2hshSkV7EqGFAKlquoWGjL6ysuLy+2iAKCBsTAT6iIBhARWZRUCiQkkGUIkD2zne/vj0mGJGQdM8mcyf252svMkjPfOcyTe57nPOc5iogIiIiIWpiupQsgIiICGEhEROQhGEhEROQRGEhEROQRGEhEROQRGEhEROQRWn0gZWZmol+/fti2bVuV+9977z0sWbKk2evZsWMH5s6dCwBYunQpUlJSXNpORkYGFi5cCADIycnBtGnTmqzGhtqxYwcGDx6Mn3/+ucr9c+fOxY4dO5q9Hvpl2Fbcp/J7ac1afSABgE6nw6uvvooLFy60dClVrFq1Cvfff79Lv3vlyhVcvHgRANCpUyd8+OGHTVlag4kI/vCHP8BsNrfI61PTYlshdzK0dAGewN/fHzNnzsRzzz2HDz/8EL6+vlUeLywsxIoVK5CamgpFUTB69Gg8++yzMBgMGDRoEMaNG4fU1FSsWbMG06dPx8yZM5GSkoKSkhI888wzSE5Oxs8//4ywsDC89dZbMBqN2L59Oz766CNYrVbk5+dj9uzZmD59epXXfeKJJzBjxgzo9XqsX7/eef+lS5cwfvx4vP7663jrrbewf/9+lJWVobS0FIsXL8aDDz6IZcuWIScnB7/5zW+wYsUKxMfH48SJE7BarVi9ejUOHz4MvV6PwYMH48UXX0RQUBAefPBBTJkyBYcPH0ZWVhYSEhLw+9///pb9NW3aNJSWlla57+6778by5ctveW5kZCSsViteffVVvPzyy7c8fu7cOaxcuRI3btyAoiiYNWsWJk+ejKNHj2Lt2rXo3r07zp07B5vNhhUrVmDYsGGwWCxYs2YNjh07BrvdjgEDBmDZsmUICgpq1L87NR7bivvaSm1qayMA8Pbbb2P79u0IDAzE8OHDsX//fhw4cKDB2/Y40splZGTIkCFDxG63y4wZM2T16tUiIvLuu+/K4sWLRUTkhRdekFdeeUVUVRWz2SyzZs2SDRs2iIhI3759ZefOnc7t9e3bVzZt2iQiIhs2bJChQ4dKdna22O12mTJliiQlJUlRUZE89thjcu3aNREROXHihAwZMkRERD7++GOZM2eOiIj8+te/ls8//7xKvfv375fx48eLyWSSzMxMeeKJJ6S0tFRERHbv3i1xcXEiInLkyBGJjY2t8h5FRP7617/KM888IxaLRex2uyxZskReeuklEREZO3as8/1nZ2fLnXfeKZcuXXJ531a8l5ycHBkxYoQcOHBARETmzJkjH3/8sVitVhk3bpzs3bvX+ZqjR4+W77//Xo4cOSL9+/eXn376SURE3nvvPZkxY4aIiPz973+X1atXi6qqIiLyxhtvyPLly12ukxqGbcX9baW6utrIV199JRMmTJD8/HxRVVVefPFFGTt2rMs1eAL2kMrpdDq8/vrrmDx5MkaNGlXlsa+++gpbtmyBoijw9fXFtGnTsGnTJsyZMwcAMHz48CrPnzBhAgCgR48e6Nu3Lzp16gQA6NatG/Lz8xEYGIi33noLBw8eRFpaGlJTU1FSUlJvjT/88AP++Mc/YuPGjejYsSMA4LXXXsOuXbuQnp6OkydPori4uM5tfPXVV1i0aBF8fHwAOL5ZLliwwPn4uHHjADiGLkJCQpCfn4/u3btX2UZjv/WFhYVh1apVSExMRFJSkvP+tLQ0mM1mREdHO18zOjoahw4dwn333YcuXbqgf//+AIABAwZg586dAIAvv/wShYWFzmMGVqsVISEhdb5vajpsKw7uaCvV1dVGCgoKEBMTgzZt2gAAZsyYgSNHjjRou56KgVRJeHg4VqxYgcWLFzu7xACgqioURaly22azOW8bjcYq26n4AFf/uUJ2djYef/xxPPbYYxg2bBhiYmLwr3/9q87aLl68iIULF2LNmjXo3bs3AODHH3/E/Pnz8V//9V8YOXIk7rnnHqxYsaLO7dT0XqxWq/O2n5+f82dFUSA1LHXoyhj7gw8+iJiYGCxevBgGg+NjZ7fbq9QCOI45Vexbf3//GmtRVRWJiYkYM2YMAKC4uJjHqJoZ24r72kpldbURg8FQ5TX1ev0vei1PwEkN1cTExCAqKgqbNm1y3jdq1Cj885//hIjAYrFg69atLh9ABYAzZ86gQ4cOmD9/PkaNGuVsYHa7vcbnm0wmzJ49Gy+88ALuu+8+5/3Hjh3DoEGDMHPmTNx7773Yv3+/cxt6vb5K46kwevRobNmyBVarFaqqYvPmzRg5cqTL76UxlixZgtzcXBw+fBgAcPvtt8NgMGDfvn0AHDOc9u7dW+++HTVqFDZv3gyLxQJVVfHSSy/hL3/5i9vrp6rYVtyvrjYyZswY7Nu3D4WFhQCA7du3N2tt7sBAqsGyZcvQpUuXKrevXbuG+Ph4xMfH47bbbsO8efNc3v7IkSPRqVMnxMTEYOLEicjKykKHDh2Qnp5e4/P//ve/Iy8vD5s2bUJCQgISEhIwe/ZsxMXF4fr165g4cSImTZoEo9GI/Px8FBUVoU+fPvDz88Ojjz5a5VvUb3/7W3Ts2BGTJ0/GxIkTYbPZsHTpUpffS2P4+fnhjTfecH7j8/HxwZtvvon3338f8fHxmDlzJhYsWIARI0bUuZ358+eja9eumDJlCiZNmgQRaZFpx8S20pQOHTqEoUOHOv8fFRVVZxuJjIzEY489hscffxxTp05FYWEhAgIC3FZfc1Ckpn4mERF5tNOnT+PEiRN48sknAQAbN27EyZMnsW7duhauzHUMJCIiDSoqKkJiYiIuXLgARVEQHh6OV155xTkxRIsYSERE5BF4DImIiDxCgwPp1VdfdR44Pnv2LKZOnYoJEyZg6dKlVaZ1EhERuaJBgXT48GHnSYkA8Pzzz+Pll1/G3r17ISLYunWr2wokIqLWod4TY2/cuIG1a9di3rx5SE1NxeXLl1FWVoYhQ4YAAKZOnYq//e1vt6wtVZ+8vCKoauMPX7Vvb8T16/Wfqd0SWJtrvLW20NBgl36PbaP5eGpdgPfWVle7qDeQXn75ZSxatAhZWVkAgNzcXISGhlbaeChycnIaXVRIiOsLYbra0JsDa3MNa7uJbaN5eWpdQOurrc5A2rZtG8LDwxEZGem8fk315TRE5JalLRrC1W+BoaHBMJkKG/17zYG1ucZba2vuHpK37kd38tS6AO+tzeUe0p49e2AymZCQkID8/HyUlJRAURSYTCbnc65evYqwsDCXCiMiIqpQZyBt3LjR+fOOHTvw7bff4s9//jPi4uJw/PhxDBs2DJ9++imioqLcXigREXk3l1b7XrNmDZYtW4aioiIMHDjQuXRFcykqtcLoZ4BO1/ihQiIi8kwNDqSpU6di6tSpAICIiIgWW1nWalOx+K3D+NW4OzBqcHiL1EBERE1Pcys1mK12lJptuF5Y1tKlEBFRE9JcINntKgDAWv5fIiLyDpoLpIrpsFYbA4mIyJtoLpBsdgYSEZE30lwg2dXyITsGEhGRV9FcIDmH7HgMiYjIq2gukGzlQWRjD4mIyKtoLpDsnNRAROSVtBtIHLIjIvIq2gskOyc1EBF5I+0FEofsiIi8knYDiUN2REReRXuBxCE7IiKvpL1AKu8h2dhDIiLyKpoNJPaQiIi8i/YCiUN2REReSXuBxB4SEZFX0l4gla/2bVfFua4dERFpn/YCqVIIceo3EZH30F4gVQohDtsREXkP7QVS5R4SA4mIyGtoOpB4LhIRkffQXiBxyI6IyCtpL5A4ZEdE5JW0HUgcsiMi8hqaC6SSMqvz5zILA4mIyFs0KJD++te/YtKkSYiNjcXGjRsBACkpKYiPj0d0dDTWrl3r1iIrM1vszp9LzNY6nklERFpiqO8J3377LY4cOYKkpCTYbDZMmjQJkZGRSExMxD/+8Q+Eh4dj7ty5OHjwIMaMGeP2gjnLjojIO9XbQ7r33nvx/vvvw2AwIC8vD3a7HQUFBejZsye6d+8Og8GA+Ph4JCcnN0e9nNRAROSlGjRk5+Pjg7/97W+IjY1FZGQkcnNzERoa6nw8LCwMOTk5biuyMlW9GULsIREReY96h+wq/O53v8Ps2bMxb948pKWlQVEU52MiUuV2Q4SEBDXq+RUq95B0Oh1CQ4Nd2o67eFo9lbE21zR3ba62DYD70RWeWhfQ+mqrN5DOnz8Pi8WC/v37IyAgANHR0UhOToZer3c+x2QyISwsrFEvnJdX5NJq3Xa7QFEAEaC41AKTqbDR23CX0NBgj6qnMtbmml9Sm6sN1tW24a370Z08tS7Ae2urq13UO2SXmZmJZcuWwWKxwGKxYP/+/Zg2bRouXryI9PR02O127N69G1FRUS4V11iqKvAxOMrmMSQiIu9Rbw9pzJgxOHXqFCZPngy9Xo/o6GjExsaiQ4cOWLhwIcxmM8aMGYOYmJjmqBd2VWDQ62CxqjyGRETkRRp0DGnhwoVYuHBhlfsiIyORlJTklqLqoopApyjQKQqsNl6gj4jIW2hupQa7XYWiAHq9wh4SEZEX0V4gqQKdToFex0AiIvImmgskVXUM2el1Cic1EBF5Ec0Fkl11TPvW6xSu9k1E5EU0F0jOHpJeBxt7SEREXqPBKzV4CkcPSYFex+shERF5Ew0GkgqdAoiisIdERORFNBdIavksO4A9JCIib6K5QKoYstMpYA+JiMiLaG5Sg90u0ClwTGqwc6UGIiJvoblAUuXmibE8D4mIyHtoLpBuzrLjeUhERN5Ee4FUsZadjrPsiIi8ieYCqeLEWB17SEREXkVzgWSvtlKDCCc2EBF5A00GUsWQnZTfJiIi7dNcIKmVLj8B8DLmRETeQnOBZK90+QkAsDCQiIi8guYCSa0YstM7Srfa7C1cERERNQXNBZJdVaEoCgwcsiMi8ioaDKTyY0j68iE7KwOJiMgbaCqQVBGIwLGWna5iyI6BRETkDbQVSOVTvBWlUg+Jx5CIiLyCpgKp4pwjnQIeQyIi8jKaCiTVGUhKpVl2DCQiIm+gqUCyVx6y03HIjojImzQokNavX4/Y2FjExsbitddeAwCkpKQgPj4e0dHRWLt2rVuLrOAcstOh0jEk9pCIiLxBvYGUkpKCr7/+Gjt37sQnn3yCH3/8Ebt370ZiYiLefPNN7NmzB2fOnMHBgwfdXmyVSQ0Vs+w47ZuIyCvUG0ihoaFYsmQJfH194ePjg969eyMtLQ09e/ZE9+7dYTAYEB8fj+TkZLcXay+/3IROUWAo7yHxEhRERN6h3kC64447MGTIEABAWloaPv/8cyiKgtDQUOdzwsLCkJOT474qy9ml0pBdxTEkK48hERF5A0NDn3ju3DnMnTsXL7zwAvR6PdLS0pyPiTguK94YISFBjXo+AJSVd4aMAb5oExwAg14HH18DQkODG70td/GkWqpjba5p7tpcaRsVuB8bz1PrAlpfbQ0KpOPHj+N3v/sdEhMTERsbi2+//RYmk8n5uMlkQlhYWKNeOC+vyHlMqKGuXi0CAJjNNhQWlcHHoOBGQRlMpsJGbcddQkODPaaW6liba35Jba42WFfaRsXreeN+dCdPrQvw3trqahf1DtllZWVhwYIFWLNmDWJjYwEAd911Fy5evIj09HTY7Xbs3r0bUVFRLhXXGDenfTtu++j1PA+JiMhL1NtDeu+992A2m7F69WrnfdOmTcPq1auxcOFCmM1mjBkzBjExMW4tFHCsZQc4JjUAgI9Bx8tPEBF5iXoDadmyZVi2bFmNjyUlJTV5QXWx229O+wYcgcTzkIiIvIPGVmoon/ZdXrWjh8RAIiLyBpoKpMpr2QHlPSRO+yYi8gqaCqSK85AqD9nxxFgiIu+grUCy37z8BFAeSFw6iIjIK2gqkJxr2ekqekh6TmogIvISmgoke/VjSHqF076JiLyEJgPJeWIse0hERF5DU4FU0yw7TvsmIvIOmgqkW4bsGEhERF5DY4HkCB+lvGpfgw52VZz3ExGRdmkqkKoP2RkMjvItnPpNRKR5mgoku3rribEAOGxHROQFNBlIFSfG+jKQiIi8hqYCSb2lh6QHAFh4LhIRkeZpKpCcPSQdh+yIiLyNNgOpfMjOoC+f1MBAIiLSPM0FkoKbQ3bOY0i8BAURkeZpKpBUVaDXK87bziE7XoKCiEjzNBVIdlV1Hj8CbgYSz0MiItI+jQWSQK+7WbKvr2OWXVGZFTyMRESkbZoKJFUV6Cv1kMrnOODnjBswW20tVBURETUFzQVSTUN2FVeSJSIi7dJUINmq9ZCcgcTFVYmINE9TgVR9yM5HXxFI7CEREWmdpgLJXm3ITqdToFMAG4fsiIg0T1OBZLWpzvXrKuj1Og7ZERF5AU0FksVqh69P1ZL1OoWTGoiIvECDA6moqAhxcXHIzMwEAKSkpCA+Ph7R0dFYu3at2wqszBFIVXtIBr2Ox5CIiLxAgwLp5MmT+NWvfoW0tDQAQFlZGRITE/Hmm29iz549OHPmDA4ePOjOOgEAZpsKv1sCSYGNSwcREWlegwJp69atWL58OcLCwgAAp06dQs+ePdG9e3cYDAbEx8cjOTnZrYUCNfeQ/Hz1KLNwcVUiIq0zNORJq1atqnI7NzcXoaGhztthYWHIyclp1AuHhAQ16vmAY5adr48OwUH+AAAfHwOCjb4w3SiF0eiH0A7GRm+zqYWGBrd0CbViba5p7tpcaRsVuB8bz1PrAlpfbQ0KpOpUVXVeAgIARKTK7YbIyytyXgG2oUrKbPA16FFYVAYAsFptMOgUlJTZUFJihsnesj2l0NBgmEyFLVpDbViba35Jba42WFfaRsXreeN+dCdPrQvw3trqahcuzbLr3LkzTCaT87bJZHIO57mTxXbrkJ2/nwFWm8qrxhIRaZxLgXTXXXfh4sWLSE9Ph91ux+7duxEVFdXUtVUhIrBYVfhVm/btX7Hid6nFra9PRETu5dKQnZ+fH1avXo2FCxfCbDZjzJgxiImJaeraqqjoAd3SQyoPpMISq1tfn4iI3KtRgXTgwAHnz5GRkUhKSmrygmpjKQ+k6tO+A/wcb4GBRESkbZpZqcFidUxYqL2HxCE7IiIt00wgmZ2BVP0YkqOHVMQeEhGRpmkmkCzW8mNI1RZX9THoYNArKGAPiYhI0zQTSOZahuwARy+JPSQiIm3TTCBZbI5A8vOtKZD0KCxlIBERaZl2AqmWITugPJA4ZEdEpGkaCqSaJzUAjtUaOO2biEjbtBNItZwYCwABvnoUlVigCq+LRESkVZoJJLOl7kkNqjgWXyUiIm3STCA5JzXUOGTnCKmCYh5HIiLSKs0EktmqQoHjkuXVVazWkF9kbuaqiIioqWgmkCxWO3x99TVedynY6AsAyLle2txlERFRE9FOINlU+BlqLjfQ3wBfHx2u5BU3c1VERNRUXLr8REuwWG+9OF8FRVHQqb0RWVcZSER0k4ggI7cIP6VdR0ZuEa4VlMEugnaBvrgtvA3G3NMDRn3jrnZN7uMVgQQAnUOM+E9mfjNWRESeqsxiw8GTWdj/XQau5pcBANoF+aJj2wDo9TqkZRfiu3+bsO3L8+jSMRCj7gzHyDs7O4f/qWVoJpDMVhW+tQzZAUDnDkYcO5uLUrPNeY0kImpdVBF8czoLOw5eQH6xBWHtAxA5qDOi7+uBi5cdX1jv6huKkz+bUFJmg4+vAUdOZ2Hrv/6DT76+gIeG98CkET34N6SFaGavN6SHBABZeSW4vUub5iqLiDzEzxk3sOWLc0jPKUTvLm0wK7Y/8gocvaM2gbf2fIz+BgwfGA4fHTDo9g44dT4Pnx1OQ8qZLMyI7ovBvUNRx3dgcgPtBJLNjqCA2rvTnTs4AunK1WIGElErcvVGKbZ+eR7fpeaiXZAfnozph+ERYRAozkCqT/tgP4wZ0gVtg/2w6bOzWP/xaYwb1g2PP9inxlNNyD20E0hWFb5tav9gdGxvhEGv4FJuIWxqOL/ZEHk5s8WOz46kI/noJSgKMHFED4wd1h1nzl/Fd6m5uKtvaKO32Su8DeJG9sJ3qSbsP56J85fzMefhgc4vvORemgkks9Ve40rfFWx2FUEBPkhNvw6z1QYDx4CJvJKI4OhPOdj25XlcLzRjeEQoenYORqC/D/RNMGPOoNdhxMBOiBraBR/s+xnL//dbPDKmN8YP6wadjjPy3Ekzf7UtNrXGZYMqaxfkh+xrJSg12xDIQCLyOmnZBfjg/53Dfy7no3tYEJ6aGIHburTF8dScJn+t/r06YNKInkg5k40P95/D0Z9yMP2hO9C7S9smfy1y0Mxf7fomNQBA/17tkZ5diE8PXcBvYgc0U2VE5G4FJRbs/OoCvvrhCoKNPpj+UF/odcC1gjJ07xzsttc1+hswblhX6PQ67PjyPFa9fxzD+4VhStRtCA8JdNvrtlaaCCQRcQzZ1dNDCm0XgAG3tcc3p7MRObAzBvTq0EwVEpE7lFls2H88E3uOpMNsUfHA3V0xcURP+Pka3NIrqomiKBjcpyMsFjt+vHgNpy5cxfGfczHyznBMGX072gf7NUsdrYEmAslmF4gAfvX0kADgrj4dkXOtFB8d+A+Wz7wHuhrWviMiz3Y1vxRfnczCv77PRHGZDUP6dETs/b2QkVuIMxfyXJqw8Ev5GHQYckdH/Cq6L/YeuYSvT13B0Z9yEHNvD8Tcx3OXmoIm9mDFpSfqmtRQwaDXIfb+Xtj0eSq+/SkHIwZ2dnd5RNQESs02fP+zCYd/zMbZtOsAgMF9OmLcsG64rUsbqAJk5Ba2cJWOa7L16BSE+JG9kJ5dhF0pafjyh8t48O5ueGBIF7QNYo/JVdoIJGvF1WIbNpd7WP8w7P8uA9sPnkfvbu0R2pYfECJPZLbaceZCHo6l5uKHc1dhsakIaeOPmBE9MGJgZ7QL9sfx1BxczS9tkV5RXYKNvpgVPwBjr+Tj88Pp+PTri0j6+iJ6hbfBgF7tcUe3dujXvR38fOv/Ik0OvyiQdu3ahf/5n/+BzWbDU089hRkzZjRVXVVYrLVfLbYmVpuKgbd1wP7jmVix8ShmjO+LeweEQa/jyUlELcWuqjDdKMNlUzHSsgvwn8x8nL+SD5tdEOhvwL0DOmFYRBiu5ZdCURScv5yPu/p69tpyZqsdpuulGB4RhqkP9MGJf+fip7Tr+PzoJXx2OB0GvYI7urXDnbeHoH/P9ugWFsi/Q3VwOZBycnKwdu1a7NixA76+vpg2bRruu+8+9OnTpynrA+D4RwcaNmRXoVMHI+Lu74Xj/zbhnd0/4ZOvL+CeiE7o37M9wkOMaBfsx+NLRE1AFYHZYkeZxY7iUivySyy4UWhGXkEZ8vLLcDW/DDeKLMi9XgK7KgAAnaKga2ggxgzpiohe7ZFfaIZOp6BH52Bcb+DqCp6mfRs/hLT1x+i7wjH7toE4cCwDV64W43qhGVv/9R8AjuPgXUMD0bVjIDqHGBHaNgAhbf3RLsgPwUafVr8qhMuBlJKSghEjRqBdu3YAgAkTJiA5ORnPPPNMg36/MSeYKToFYe0D0DbQFzqdAqO/DwDH8aK6fjb6++DFp3ribNo1HP0pB9+fM+G7f+cCAPQ6BcFGX/j76RHk74PAAB+odoFVVaFTFAT46eHva4DZaoMCBYEBPlCgQFEAH4MCq83RCA0GHXwMCvQ6BUajH0pKzLCrAp3iuE9RFKDaW5XyRgnFsT2l0hMEAtUuUBRAV/5NSuCY1KEAgFL++4rSqEA1GvNQXGyGiEDRKc7XFBGIoxSIKlBFoNfparwQorsEBuah2MMuPy8QiCoIDPRDkL8BA3q2b7bXrq1t5BWU4cyFa876yv8HiEAVwN/fB8UlZqiqIyREbv5XRJz/1uUbgABQy//NVVVgtQtUVXWGhpQ/WVQVNlVgswssNhU2uwq7TYXVrsJiU50jGDUJCvBFuyBfdO0UjJGBXdAh2Beh7f0R2t6I1PLjRH17tMfZi473VbkdV7/tnp8Vt7xeoL8P+nRrhz7d2uGuvqHILyxDenYhLpuKkXu9BJlXi/HvjBu37C9/Xz0CfA3w89PD6O8DRQR6gw4GnQ56nQK9XgeDzvG3Qa93/A3Q6ZRKf29QfhvOv1e1UpSb/8iV7qv4O+P4T80bMBrzUFJya5tVFGBw7xC0c/E4miJSvaKG2bBhA0pKSrBo0SIAwLZt23Dq1Cm88sorLhVCREStm8v9Q1VVq3yLFpFm/VZNRETexeVA6ty5M0wmk/O2yWRCWFhYkxRFREStj8uBdP/99+Pw4cO4du0aSktLsW/fPkRFRTVlbURE1Iq4PKmhU6dOWLRoEZ588klYrVY8+uijGDx4cFPWRkRErYjLkxqIiIiaUuue9E5ERB6DgURERB6BgURERB6BgURERB7BowJp165dmDRpEqKjo7F58+ZbHj979iymTp2KCRMmYOnSpbDZbACAK1euYMaMGYiJicFvf/tbFBcXN3ttX3zxBRISEvDwww9j/vz5yM/PBwDs3LkTo0aNQkJCAhISErB27dpmr239+vUYO3ass4aK59S2P5urtrNnzzprSkhIwOjRoxEXFwegefZbUVER4uLikJmZectjLflZq47twj21sV3UrsXahniI7OxsGTt2rFy/fl2Ki4slPj5ezp07V+U5sbGxcuLECRERefHFF2Xz5s0iIjJnzhzZvXu3iIisX79eXnvttWatrbCwUEaOHCnZ2dkiIrJu3Tp55ZVXRERk5cqVsmvXriatpzG1iYjMnTtXvv/++1t+t7b92Zy1VSgpKZHY2Fg5duyYiLh/v/3www8SFxcnAwcOlIyMjFseb6nPWnVsF+6pTYTtojYt2TY8podUebFWo9HoXKy1wuXLl1FWVoYhQ4YAAKZOnYrk5GRYrVYcO3YMEyZMqHJ/c9ZmtVqxfPlydOrUCQDQr18/ZGVlAQBOnz6NnTt3Ij4+Hs8995zzG2Jz1QYAZ86cwYYNGyFEA6AAAAbnSURBVBAfH4+VK1fCbDbXuj+bu7YKGzZswD333IPhw4cDcP9+27p1K5YvX17j6iIt+Vmrju3CPbUBbBe1acm24TGBlJubi9DQmxfgCgsLQ05OTq2Ph4aGIicnB9evX0dQUBAMBkOV+5uztvbt2+Ohhx4CAJSVleHtt9/G+PHjnfXMnz8fSUlJCA8Px8qVK5u1tuLiYvTv3x/PP/88du7ciYKCArz55pu17s/mrK1CYWEhtm7dWmWleHfvt1WrVjkbeX11N+dnrb5a2C6apja2i9q1ZNvwmCvG1rdYa22PV38egCZf5LWhC8kWFhZiwYIFiIiIwJQpUwAA//3f/+18/Omnn3Y20OaqLTAwEO+8847z9qxZs5CYmIioqCi3L47b0P2WlJSE8ePHIyQkxHmfu/dbXVrys9bQWjyhVrYL99RWwdPaBeD+z5vH9JDqW6y1+uNXr15FWFgYOnTogMLCQtjt9hp/rzlqAxzfHKZPn45+/fph1apVABwN8f/+7/+czxER6PVNeznj+mq7cuUKtm/fXqUGg8FQ6/5sztoqfPHFF5g0aZLzdnPst7q05GetvlrYLpqmNrYL17j78+YxgVTfYq1du3aFn58fjh8/DgD49NNPERUVBR8fHwwfPhx79uwBAHzyySdNvshrfbXZ7XbMmzcPEydOxNKlS53fDIxGI959912cPHkSAPDPf/6zyb/R1Febv78/Xn/9dWRkZEBEsHnzZjz00EO17s/mrA1wNKoff/wRQ4cOdd7XHPutLi35WauO7cI9tbFduMbtn7dGT4Nwo6SkJImNjZXo6Gh5++23RUTk6aefllOnTomIyNmzZ+WRRx6RCRMmyLPPPitms1lERDIzM+XXv/61TJw4UWbNmiU3btxo1tr27dsn/fr1k4cfftj5/8TERBEROXbsmEyePFliYmJk3rx5UlBQ0Ky1iYgkJyc7H1+yZIlzv9W2P5uztqtXr8r9999/y+81x34TERk7dqxzJpGnfNaqY7to+tpE2C7q0xJtg4urEhGRR/CYITsiImrdGEhEROQRGEhEROQRGEhEROQRGEhEROQRGEjUaDt27MDcuXNbugwij8J28csxkIiIyCN4zFp2rd3Ro0exZs0adOnSBRcuXIC/vz9Wr14NnU6HlStXori4GCaTCREREVi3bh38/Pxw8OBBrFmzBjqdDv3790dKSgo++OADdOvWDdu2bcOWLVugqiratWuHl156Cb1798aSJUtw48YNZGRk4IEHHsCjjz5a6/bvvPNOzJkzB9988w1yc3Px9NNPY/r06VXqTk5Oxpo1a/D222/j9ttvb6G9R96K7aKVaaqzeumXOXLkiERERDive/LBBx/IlClTZPXq1fLJJ5+IiIjFYpG4uDhJTk6Wa9euyb333itnz54VEZEdO3ZI3759JSMjQ44ePSrTp0+XkpISERE5dOiQxMTEiIjI4sWL5amnnnK+bm3bFxHp27ev/OMf/xARkdOnT8ugQYOkrKxMPv74Y5kzZ47s2rVLYmNj5cqVK+7fQdQqsV20LuwheZCIiAjnsu+PPPIIVq5ciffeew9nzpzBO++8g7S0NOTm5qKkpATfffcdevfujYiICADAlClT8Kc//QkA8OWXXyI9PR3Tpk1zbrugoAA3btwAAAwbNsx5//PPP49vvvnmlu1XGDduHABg4MCBsFgszsdOnz6NQ4cOITExEeHh4W7cK9TasV20HgwkD1LTyr3PPfccjEYjJk6ciAceeABZWVnOVX6l2qpPOp3jkKCqqkhISMDzzz/vvJ2bm4u2bdsCcCzSWOHZZ5+F3W6/ZfsV/Pz8ANxcSr7iseDgYLzxxhv4/e9/jwceeADdunVrqt1AVAXbRevBSQ0eJDU1FampqQCAjz76CEOHDsXJkyexYMEC5zL0J0+ehN1ux9133420tDTn8/fu3YuCggIoioJRo0bhs88+Q25uLgBgy5YteOqpp2p8za+//rrG7denV69eiIyMxBNPPIHFixdDVdVf/P6JasJ20Xqwh+RBOnbsiHXr1uHy5cvo0KEDXnvtNRw8eBALFiyA0WhEUFAQ7rnnHly6dAnt2rXDX/7yFyxevBg6nQ6DBg2CwWBAQEAARo0ahdmzZ2PWrFlQFAVBQUFYv359jRfMWrRoUY3bb6h58+bhwIEDePfddzFnzpym3B1EANguWpWWO3xFlR05ckRiY2Mb/PzCwkJ59dVXnQdoz5w5IyNHjhRVVd1VIlGzY7toXdhD0qigoCD4+Pjg0UcfhcFggMFgwLp169x+SW0iT8Z2oW28HhIREXkETmogIiKPwEAiIiKPwEAiIiKPwEAiIiKPwEAiIiKPwEAiIiKP8P8B9rBzkpNj/KUAAAAASUVORK5CYII=
 "
 >
 </div>
@@ -13493,28 +13513,8 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Results">Results<a class="anchor-link" href="#Results">&#182;</a></h3><p>There does not appear to be a distinct elbow as the number of clusters increases, but interestingly, the only noticeable kink in the curve past K=5 is at K=10. This, along with the intuition that the number of clusters should be equal to the embedding dimension allowed me to confidently choose ten clusters. Additionally, this is the maximum number of clusters I care to interpret so that works out well.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[9]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">labels</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">KMeans</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">n_jobs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_init</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">spectral_embedding</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Saving-Results">Saving Results<a class="anchor-link" href="#Saving-Results">&#182;</a></h3><p>Each document analyzed will have an assigned cluster. To compress the space requirements of storing the similarity matrix, I will only retain the top 100 matches for each paper.</p>
+<p>One concern I have following the log-normal distribution is the long tails due to outliers. This will leave a lot of empty space on the constellation plot and groups too many papers too close to the mean. To remedy this, I will scale the normal distribution, then truncate outliers so the bell of the curve covers a higher portion of the score range.</p>
+<p>A good approach is to have three standard deviations on either side of the mean so that only papers with scores in the most extreme 1% have their scores truncated.</p>
 
 </div>
 </div>
@@ -13524,18 +13524,9 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 <div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">sims_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cosine_sims</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">interesting_articles</span><span class="o">.</span><span class="n">index</span><span class="p">,</span>  <span class="n">columns</span> <span class="o">=</span> <span class="n">interesting_articles</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-
-<span class="n">similarities_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="n">from_idx</span> <span class="p">:</span> <span class="p">{</span>
-        <span class="n">to_idx</span> <span class="p">:</span> <span class="n">sim_value</span>
-        <span class="k">for</span> <span class="n">to_idx</span><span class="p">,</span> <span class="n">sim_value</span> <span class="ow">in</span> <span class="n">sim_series</span><span class="o">.</span><span class="n">nlargest</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-    <span class="p">}</span>
-    <span class="k">for</span> <span class="n">from_idx</span><span class="p">,</span> <span class="n">sim_series</span> <span class="ow">in</span> <span class="n">sims_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()</span>
-<span class="p">}</span>
-
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span><span class="s1">&#39;similarities.json&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">similarities_dict</span><span class="p">,</span> <span class="n">indent</span> <span class="o">=</span> <span class="mi">4</span><span class="p">))</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">log_pageranks</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">MinMaxScaler</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">pagerank</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,),</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13545,50 +13536,13 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="prompt input_prompt">In&nbsp;[25]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">labels</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">data</span> <span class="o">=</span> <span class="n">labels</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">interesting_articles</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-<span class="n">labels</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;label&#39;</span>
-
-<span class="n">interesting_articles</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;inner&#39;</span><span class="p">)</span>
-<span class="n">interesting_articles</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span> <span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">),</span> 
-    <span class="n">index</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Analyzing-Clusters">Analyzing Clusters<a class="anchor-link" href="#Analyzing-Clusters">&#182;</a></h3><p>Though the elbow plot did not show inherent clusterability in the data, I found that the clusters have heterogeneous numbers of constituent papers, suggesting some distinct clusters exist. To name the clusters, I saved 50 paper titles from each cluster and examined them for a common theme.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[5]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span><span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">scale_factor</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span><span class="o">/</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="n">log_pageranks</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+<span class="n">test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">scale_factor</span> <span class="o">*</span> <span class="p">(</span><span class="n">log_pageranks</span> <span class="o">-</span> <span class="n">log_pageranks</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Scale Factor: &quot;</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">)</span>
+<span class="n">seaborn</span><span class="o">.</span><span class="n">distplot</span><span class="p">(</span><span class="n">test</span><span class="p">)</span>
 </pre></div>
 
     </div>
@@ -13601,41 +13555,43 @@ The similarity matrix computed with the TF-IDF abstract vectors can be viewed as
 
 <div class="output_area">
 
-    <div class="prompt output_prompt">Out[8]:</div>
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Scale Factor:  1.6162869177292625
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[25]:</div>
 
 
 
 
 <div class="output_text output_subarea output_execute_result">
-<pre>6    5094
-4    4336
-0    3577
-3    3301
-1    3237
-5    1696
-8    1424
-9    1053
-2     232
-7      25
-Name: label, dtype: int64</pre>
+<pre>&lt;matplotlib.axes._subplots.AxesSubplot at 0x14c9f07dac8&gt;</pre>
 </div>
 
 </div>
 
-</div>
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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
+"
+>
 </div>
 
 </div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">&#39;label&#39;</span><span class="p">,</span><span class="s1">&#39;pagerank&#39;</span><span class="p">],</span> <span class="n">ascending</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">50</span><span class="p">)[[</span><span class="s1">&#39;label&#39;</span><span class="p">,</span> <span class="s1">&#39;title&#39;</span><span class="p">]]</span>\
-    <span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s1">&#39;cluster_analysis.csv&#39;</span><span class="p">,</span><span class="n">index</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
-</pre></div>
 
-    </div>
 </div>
 </div>
 
@@ -13643,23 +13599,37 @@ Name: label, dtype: int64</pre>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>After analyzing article titles from each cluster, I assigned a category name that most represented the type of literature found in that cluster. As seen below, two categories sorted out non-english articles, which I will disclude from Constellation.</p>
-<p><em>Categories</em></p>
-<ol>
-<li>Epidemiology</li>
-<li>Drug Chemistry</li>
-<li>Spanish Articles</li>
-<li>Molecular Biology</li>
-<li>Public Health, Climate</li>
-<li>Zoonotic Virus Outbreaks</li>
-<li>Immunology</li>
-<li>Non-english Articles</li>
-<li>Vaccines &amp; Antibody Therapies</li>
-<li>Livestock Diseases</li>
-</ol>
+<p>With a scaling factor of 1.616, the scores follow a normal distribution that inhabits a greater portion of the 0-1 range, which I think gives the user a good visual baseline of paper impact.</p>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[29]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">test</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;norm_pagerank&#39;</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">how</span> <span class="o">=</span> <span class="s1">&#39;left&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[32]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;analysis_v2&#39;</span><span class="p">,</span><span class="s1">&#39;metadata_plus_analysis.csv&#39;</span><span class="p">),</span> <span class="n">index</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div>
     </div>
   </div>
