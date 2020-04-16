@@ -6,6 +6,7 @@ import dash_html_components as html
 from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 import plotly
+from plotly import express as px
 import pandas as pd
 import numpy as np
 import os
@@ -13,7 +14,6 @@ import json
 import networkx as nx
 import datetime
 from dash.dependencies import Input, Output, State
-from import_data import import_data
 from datetime import datetime as dt
 
 import whoosh
@@ -249,8 +249,30 @@ DATA_DIVS = html.Div(id='user_cache', style = {'display' : 'none'}, children = [
                 #html.Div(id = 'const_data', style = {'display' : 'none'}),
                 html.Div(id = 'active_paper',style = {'display' : 'none'}),
             ])
+
+MODELS_TAB = '''dcc.Tab(value = 'models', label = 'Models', style = get_tab_style(BOX_COLOR, BOX_COLOR, side = 'right'), selected_style = get_tab_style(BACKGROUND_COLOR, BOX_COLOR,side = 'right'), children = [
+            html.Div([
+                html.Div([
+                    html.Div([
+                        html.H1('Document Similarity and Categorization', className = 'infobox_header'),
+                        html.Iframe(src = app.get_asset_url('abstract_tfidf_vectorization.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
+                    ], className = 'infobox', style = {'width' : '95%'}),
+                    html.Div([
+                        html.H1('Literature Impact with PageRank', className = 'infobox_header'),
+                        html.Iframe(src = app.get_asset_url('network_analysis.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
+                    ], className = 'infobox', style = {'width' : '95%'}),
+                ], className = 'column'),
+                html.Div([
+                    html.Div([
+                        html.H1('Disease Taxonomy Generation', className = 'infobox_header'),
+                        html.Iframe(src = app.get_asset_url('entity_recognition.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
+                    ], className = 'infobox', style = {'width' : '95%'}),
+                ], className = 'column')
+            ], className = 'row'),
+        ])'''
 #__Layout_______________
 app.layout = html.Div(children=[
+    dcc.Location(id='url', refresh=False),
     DATA_DIVS,
     dcc.ConfirmDialog(
         id='save_confirm',
@@ -324,7 +346,7 @@ app.layout = html.Div(children=[
                         html.H1('Summary Information', className = 'infobox_header'),  
                         html.P('''This summarization module extracts important sentences from a chosen set of documents. Those sentences serve as a summary, and aim to provide 
                             the most holistic review of the most important points shared by that body of documents. For a good summary, add 4-10 papers that share similar 
-                            topics or categories. If papers are too disimilar, the summary quality will suffer. If you would like to know more about how summary extraction works, visit the "Models" tab.'''),
+                            topics or categories. If papers are too disimilar, the summary quality will suffer because the algorithm will struggle to find common themes.'''),
                     ], style = {'width' : '100%',}),
                     html.Div(className = 'infobox', children = [
                         html.H1('Saved Papers', className = 'infobox_header'),
@@ -336,40 +358,30 @@ app.layout = html.Div(children=[
                 html.Div(style = {'float':'right', 'width' : '66%'},children = [
                     html.Div(className = 'infobox', children = [
                         html.H1('Summary', className = 'infobox_header'),
-                        html.P('''No summary here yet! Use the "Explore" tab to find interesting papers, then save them to your summary list. When you have found 5-10 papers, hit "Summarize All" to find the most important sentences capturing the ideas of that research.''', 
+                        dcc.Markdown('''No summary here yet! 
+                                     The summarizer module requires a lot of data and is very expensive to run, so plugging it in to this application exceeds my current resources. If you are interested in or want to sponsor this feature,
+                                     contact me about how it works and what I need to get it going!''', 
                             style = {'margin-bottom' : '30px'}),
                     ], style = {'margin-left' : '30px', 'padding' : '20px'}),
                 ]),
             ], style = {'clear' : 'both'}),                
         ]),
-        '''dcc.Tab(value = 'models', label = 'Models', style = get_tab_style(BOX_COLOR, BOX_COLOR, side = 'right'), selected_style = get_tab_style(BACKGROUND_COLOR, BOX_COLOR,side = 'right'), children = [
-            html.Div([
-                html.Div([
-                    html.Div([
-                        html.H1('Document Similarity and Categorization', className = 'infobox_header'),
-                        html.Iframe(src = app.get_asset_url('abstract_tfidf_vectorization.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
-                    ], className = 'infobox', style = {'width' : '95%'}),
-                    html.Div([
-                        html.H1('Literature Impact with PageRank', className = 'infobox_header'),
-                        html.Iframe(src = app.get_asset_url('network_analysis.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
-                    ], className = 'infobox', style = {'width' : '95%'}),
-                ], className = 'column'),
-                html.Div([
-                    html.Div([
-                        html.H1('Disease Taxonomy Generation', className = 'infobox_header'),
-                        html.Iframe(src = app.get_asset_url('entity_recognition.html'), style = {'width' : '97%', 'height' : '40vh', 'border-color' : BOX_COLOR, 'margin' : '20px'})
-                    ], className = 'infobox', style = {'width' : '95%'}),
-                ], className = 'column')
-            ], className = 'row'),
-        ])
-    ], style = {'margin-bottom' : '10px'}),  '''
+    ], style = {'margin-bottom' : '10px'}),
+    html.Hr(),
+    dcc.Markdown('''
+    Creator: Allen Lynch
+    LinkedIn: https://www.linkedin.com/in/allenwlynch
+    Contact: allen.lynch1@outlook.com
+    ''')
 ])
 
 #%%
 #Literature suggestion fetching
 def row_to_text(row):
+    doi_str = 'https://doi.org/' + str(row['doi'])
     return [
-        html.H1(row['title'], style = {'font-size' : '2.13rem', 'margin-bottom' : '5px'}),
+        dcc.Link(row['title'], href = '/' + row.name, style = {'font-size' : '2.16rem', 'margin-bottom' : '5px', 'color' : '#fff', 'font-family' : "Courier New"}),
+        html.Br(),
         html.P(row.pretty_authors, style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
         html.P('{}, {}'.format(row['pretty_date'], row['source_x']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
@@ -377,7 +389,7 @@ def row_to_text(row):
         html.P('Category: {}'.format(category_labels[row.label]), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
         html.P("doi:", style = {'display' : 'inline','margin-bottom' : '5px'}),
-        dcc.Link(row['doi'], href = 'https://doi.org/' + str(row['doi']), style = {'display' : 'inline','margin-bottom' : '5px'}),
+        html.A(row['doi'], href = doi_str, target = '_blank', style = {'display' : 'inline','margin-bottom' : '5px'}),
     ]
 #%%
 #___Filtering_________
@@ -587,8 +599,8 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
             go.Scattergl(
                 x = graph_group.published_timestamp, 
                 y = graph_group.norm_pagerank,
-                marker_color = plotly.express.colors.qualitative.Light24[i],
-                marker_line_color = plotly.express.colors.qualitative.Light24[i],
+                marker_color = px.colors.qualitative.Light24[i],
+                marker_line_color = px.colors.qualitative.Light24[i],
                 mode = 'markers',
                 marker_size = 5**graph_group.search_score * 8,
                 text = graph_group.title,
@@ -626,23 +638,34 @@ def update_paper_representations(vis_data, search_scores, active_paper_id, legen
 
     return get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
+@app.callback(
+    Output('url','pathname'),
+    [Input('constellation','clickData')]
+)
+def update_pathname(click_data):
+    if click_data is None:
+        raise PreventUpdate()
+    try:
+        click_id = click_data['points'][0]['customdata']
+        return '/' + click_id
+    except KeyError:
+        raise PreventUpdate
 
 #__Constellations______________
 @app.callback(
     Output('active_paper', 'children'),
-    [Input('constellation','clickData'), Input('visibility','children')]
+    [Input('visibility','children'), Input('url', 'pathname')]
 )
-def update_active_paper(click_data, vis_data):
+def update_active_paper(vis_data, click_id):
+    print(click_id)
     if vis_data is None:
         raise PreventUpdate()
-    elif click_data is None:
+    elif click_id is None:
         return None
-    try:
-        click_id = click_data['points'][0]['customdata']
-        visible_nodes = json.loads(vis_data)
-        return click_id if click_id in visible_nodes else None
-    except (KeyError):
-        return None
+    click_id = click_id[1:]
+    visible_nodes = json.loads(vis_data)
+    return click_id if click_id in visible_nodes else None
+    
 
 def update_abstract_box(active_paper_id):
     row = _data.loc[active_paper_id]
