@@ -17,10 +17,10 @@ from import_data import import_data
 from datetime import datetime as dt
 
 import whoosh
-from whoosh_index import get_index
+from whoosh import index
 from whoosh.qparser import QueryParser
 
-myindex = get_index('./search_index')
+myindex = index.open_dir('data/search_index')
 parser = QueryParser('content', schema = myindex.schema)
 
 #%%
@@ -31,18 +31,36 @@ DATA_FILE = './dash_sample.csv'
 #__Data_________________
 
 print('Loading data ...')
-_data, sim_df = import_data(DATA_FILE)
+#__Datapoints______
+_data = pd.read_csv(os.path.join('data','dashboard_data.csv')).set_index('index')
+_data.index = _data.index.astype(np.str)
+_data['tags'] = _data.tags.fillna('')
+
+def get_important_authors(authors_list):
+    all_authors = authors_list.split(';')
+    if len(all_authors) < 6:
+        return authors_list
+    else:
+        return all_authors[0] + ', et al.'
+
+_data['pretty_authors'] = _data.authors.apply(lambda x : get_important_authors(x))
 
 _groups = _data.groupby('label')
-
 num_groups = len(_groups)
 
+#__category_labels____
+with open(os.path.join('data','cluster_categories.txt'), 'r') as f:
+    category_labels = f.readlines()
+
+#__Similarities_______
+with open(os.path.join('data','similarities.json'), 'r') as f:
+    similarities = json.loads(f.read())
 #%%
 #__Load in taxonomy_____
-graph_data = pd.read_csv(os.path.join('.','taxonomy','graph_data.csv'))\
+graph_data = pd.read_csv(os.path.join('data','taxonomy','graph_data.csv'))\
     .drop(columns = ['Unnamed: 0'])
 
-with open(os.path.join('.','taxonomy','edge_data.json'), 'r') as f:
+with open(os.path.join('data','taxonomy','edge_data.json'), 'r') as f:
     edge_data = json.loads(f.read())
 
 taxonomy = nx.DiGraph()
@@ -98,9 +116,9 @@ def get_tab_style(color1, color2, side = 'middle', height = 50):
 START_INFO = html.Div(className = 'infobox', id='explanation_infobox', children = [
                             html.H1('Launch Instructions', className = 'infobox_header'),
                             html.P('''Welcome to Constellation! This dashboard is intended to use Natural Language Processing and Machine Learning to help Biomedical researchers 
-                            investigate a trove of almost 24,000 COVID-19 and infectious-disease-related articles. Below is your sky plot, showing each paper 
-                            as a star according to its importance in the corpus and its publish date. Click on a paper to see other papers with similar topics, explore
-                            different categories, and when you've found some documents you like, save them and use the summary extraction feature to get aquainted quickly.''',
+                            investigate a trove of almost 24,000 COVID-19 and infectious-disease-related articles. Your Constellation (to the right) shows each paper 
+                            as a star according to its importance in the corpus and its publish date. Click on a paper to see other papers with similar topics, filter by disease from the taxonomy below, explore
+                            different categories, and when you've found some documents you like, save them and use the summary extraction feature to extract the important points quickly.''',
                             style = {'margin-bottom' : '8px'}),
                             html.Button('Got It!', id = 'got_it', style = {'margin-bottom' : '8px', 'margin' : 'auto'}),
                         ])
@@ -116,7 +134,7 @@ ABSTRACT_BOX = html.Div([
                         ]),
                         html.Div(style = {'clear' : 'both'}),
                         html.Div(children = [], id = 'abstract_box', style = {'margin-left' : '20px', 'margin-right' :'20px'}),
-                ], className='infobox', style = {'display': 'block', 'overflow': 'auto', 'height' : '25vh', 'margin-top' : '15px'})
+                ], className='infobox', style = {'display': 'block', 'overflow': 'auto', 'height' : '34vh', 'margin-top' : '15px'})
 
 CONSTELLATION_LAYOUT = dict(
                             margin = {'l': 55, 'b': 40, 't': 30, 'r': 35, 'pad' : 0},
@@ -135,6 +153,12 @@ CONSTELLATION_LAYOUT = dict(
                             showlegend = True,
                             legend_orientation="h",
                             uirevision = 'dont change',
+                            annotations = [{
+                                'x': 0.02, 'y': 0.99, 'xanchor': 'left', 'yanchor': 'top', 'font_family' : "Courier New",
+                                'xref': 'paper', 'yref': 'paper', 'showarrow': False, 'font_color' : '#fff',
+                                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.0)', 'font_size' : 16,
+                                'text': 'Papers by impact and publish date',
+                            }],
                         )
 
 CONSTELLATION = dcc.Graph(id = 'constellation',
@@ -165,11 +189,17 @@ TAXONOMY_LAYOUT = dict(
             showline = False,
             zeroline = False,
             ),
+        annotations = [{
+                    'x': 0.01, 'y': .99, 'xanchor': 'left', 'yanchor': 'top',
+                    'xref': 'paper', 'yref': 'paper', 'showarrow': False, 'font_color' : '#fff', 'font_family' : "Courier New",
+                    'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.0)', 'font_size' : 16,
+                    'text': 'Concept Taxonomy',
+                }],
         margin=dict(l=0,r=0,b=0,t=0,pad=4)
     )
 
 TAXONOMY = dcc.Graph(id = 'taxonomy',
-                        style = {'height':'40vh', 'margin' : '12px'},
+                        style = {'height':'33vh', 'margin' : '12px'},
                         figure = dict(
                             layout = TAXONOMY_LAYOUT
                         ),
@@ -207,7 +237,7 @@ FILTERS = html.Div([
 SUMMARY_SELECT = html.Select(
                     id = 'saved_papers',
                     size = 10,
-                    children = [html.Option(value = '3', label = 'Test label for testing purposes only'), html.Option(value = '3', label = 'Another Test label for testing purposes only')],
+                    children = [],
                     style = {'width' : '94%', 'height' : '88%', 'margin' : '20px'}
                 )
 
@@ -243,7 +273,6 @@ app.layout = html.Div(children=[
                         html.H1('Control Panel', className = 'infobox_header'),
                         html.Div(className= 'row', children = [
                             html.Div(className= 'column', children = [
-                                html.Label('Concept Taxonomy'),
                                 TAXONOMY
                             ]),
                             html.Div(className = 'column', children = [
@@ -313,7 +342,7 @@ app.layout = html.Div(children=[
                 ]),
             ], style = {'clear' : 'both'}),                
         ]),
-        dcc.Tab(value = 'models', label = 'Models', style = get_tab_style(BOX_COLOR, BOX_COLOR, side = 'right'), selected_style = get_tab_style(BACKGROUND_COLOR, BOX_COLOR,side = 'right'), children = [
+        '''dcc.Tab(value = 'models', label = 'Models', style = get_tab_style(BOX_COLOR, BOX_COLOR, side = 'right'), selected_style = get_tab_style(BACKGROUND_COLOR, BOX_COLOR,side = 'right'), children = [
             html.Div([
                 html.Div([
                     html.Div([
@@ -333,7 +362,7 @@ app.layout = html.Div(children=[
                 ], className = 'column')
             ], className = 'row'),
         ])
-    ], style = {'margin-bottom' : '10px'}),  
+    ], style = {'margin-bottom' : '10px'}),  '''
 ])
 
 #%%
@@ -341,9 +370,11 @@ app.layout = html.Div(children=[
 def row_to_text(row):
     return [
         html.H1(row['title'], style = {'font-size' : '2.13rem', 'margin-bottom' : '5px'}),
-        html.P('{}, {} et al., {}'.format(row['pretty_date'], row['first_author'], row['source_x']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
+        html.P(row.pretty_authors, style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
-        html.P('Category: {}'.format(row['category_description']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
+        html.P('{}, {}'.format(row['pretty_date'], row['source_x']), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
+        html.Br(),
+        html.P('Category: {}'.format(category_labels[row.label]), style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
         html.P("doi:", style = {'display' : 'inline','margin-bottom' : '5px'}),
         dcc.Link(row['doi'], href = 'https://doi.org/' + str(row['doi']), style = {'display' : 'inline','margin-bottom' : '5px'}),
@@ -435,10 +466,10 @@ def update_legend_tracker(restyle_event, legend_state, active_paper):
 def abides_filter(tags, filters):
     if len(filters) == 0:
         return True
-    return len(filters.intersection(set(tags))) > 0
+    return len(filters.intersection(set(tags.split('|')))) > 0
 
 def is_visible(row, filters, min_date):
-    return abides_filter(row.disease_tags, filters) and (min_date is None or row.published_timestamp >= min_date)
+    return abides_filter(row.tags, filters) and (min_date is None or row.published_timestamp >= min_date)
 
 @app.callback(
     Output('visibility','children'),
@@ -476,22 +507,18 @@ def update_search_scores(search_value):
     results_series = (results_series - results_series.min())/(results_series.max() - results_series.min())
     return json.dumps(results_series.to_dict())
 
+#FIX
 def get_top_sims(click_id):
-    top_25 = sim_df[click_id].nlargest(n = 26, keep = 'first')[1:26].rename('similarity')
-    return top_25.index
+    return list(similarities[click_id].keys())[1:]
 
 def is_legend_visible(legend_state, label):
     return legend_state[str(int(label + 1))]
-
-def update_suggestion_list():
-    return 
 
 def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state):
 
     fig = go.Figure()
 
     if active_paper_id:
-        
         connections_made = 0
         row = _data.loc[active_paper_id]
         origin_x, origin_y = row['published_timestamp'], row['norm_pagerank']
@@ -504,6 +531,8 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
                 edge_x.extend([origin_x, x, None])
                 edge_y.extend([origin_y, y, None])
                 connections_made += 1
+                if connections_made >= 25:
+                    break
 
         if connections_made > 0:
 
@@ -538,14 +567,14 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
     candidate_papers = pd.DataFrame()
 
-    for i, (category_name, category_group) in enumerate(_groups):
+    for i, (label, category_group) in enumerate(_groups):
 
         vis_in_category = category_group[category_group.index.isin(visible_mask)]
 
         graph_group = vis_in_category.join(search_scores, how = 'left', sort = False)
         graph_group['search_score'].fillna(0, inplace = True)
 
-        if is_legend_visible(legend_state, i):
+        if not graph_group.empty and is_legend_visible(legend_state, i):
             if search_scores.empty:
                 search_hits = graph_group
             else:
@@ -561,9 +590,10 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
                 marker_color = plotly.express.colors.qualitative.Light24[i],
                 marker_line_color = plotly.express.colors.qualitative.Light24[i],
                 mode = 'markers',
-                marker_size = np.exp(graph_group.search_score) * 8,
-                text = graph_group.index,
-                name = category_group.iloc[0].category_description,
+                marker_size = 5**graph_group.search_score * 8,
+                text = graph_group.title,
+                customdata = graph_group.index,
+                name = category_labels[label]
             ),
         )
 
@@ -608,7 +638,7 @@ def update_active_paper(click_data, vis_data):
     elif click_data is None:
         return None
     try:
-        click_id = click_data['points'][0]['text']
+        click_id = click_data['points'][0]['customdata']
         visible_nodes = json.loads(vis_data)
         return click_id if click_id in visible_nodes else None
     except (KeyError):
@@ -617,11 +647,20 @@ def update_active_paper(click_data, vis_data):
 def update_abstract_box(active_paper_id):
     row = _data.loc[active_paper_id]
     new_children = row_to_text(row)
+
+    abstract_filename = _data.loc[active_paper_id].sha + '.txt'
+
+    try:
+        with open(os.path.join('data','abstracts',abstract_filename), 'r', encoding = 'utf-8') as f:
+            abstract_text = f.read()
+    except FileNotFoundError:
+        abstract_text = 'No abstract'
+
     new_children.extend([
         html.Br(),
         html.Br(),
         html.I('Abstract:', style = {'font-size' : '1.6rem'}),
-        html.P(row['abstract'], style = {'font-family' : 'Arial', 'font-size' : '1.8rem'}),
+        html.P(abstract_text, style = {'font-family' : 'Arial', 'font-size' : '1.8rem'}),
     ])
     return new_children
 
@@ -630,7 +669,6 @@ def update_abstract_box(active_paper_id):
     [Input('active_paper', 'children')]
 )
 def update_click_results(active_paper_id):
-
     if active_paper_id is None:
         return html.P('Select a paper from the constellation to learn more.')
     return update_abstract_box(active_paper_id)
