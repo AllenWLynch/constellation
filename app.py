@@ -15,76 +15,19 @@ import networkx as nx
 import datetime
 from dash.dependencies import Input, Output, State
 from datetime import datetime as dt
+from load_data import load_data
 
 import whoosh
 from whoosh import index
 from whoosh.qparser import QueryParser
 
-myindex = index.open_dir('data/search_index')
-parser = QueryParser('content', schema = myindex.schema)
-
 #%%
 app = dash.Dash(__name__)
 
-#%%
-DATA_FILE = './dash_sample.csv'
-#__Data_________________
+#load all the data from Azure cloud
+_data, _groups, num_groups, category_labels, similarities, abstracts, taxonomy, edge_x, edge_y, myindex = load_data(ACCOUNT_NAME, ACCOUNT_KEY, SHARE_NAME)
 
-print('Loading data ...')
-#__Datapoints______
-_data = pd.read_csv(os.path.join('data','dashboard_data.csv')).set_index('index')
-_data.index = _data.index.astype(np.str)
-_data['tags'] = _data.tags.fillna('')
-
-def get_important_authors(authors_list):
-    all_authors = authors_list.split(';')
-    if len(all_authors) < 6:
-        return authors_list
-    else:
-        return all_authors[0] + ', et al.'
-
-_data['pretty_authors'] = _data.authors.apply(lambda x : get_important_authors(x))
-
-_groups = _data.groupby('label')
-num_groups = len(_groups)
-
-#__category_labels____
-with open(os.path.join('data','cluster_categories.txt'), 'r') as f:
-    category_labels = f.readlines()
-
-#__Similarities_______
-with open(os.path.join('data','similarities.json'), 'r') as f:
-    similarities = json.loads(f.read())
-#%%
-#__Load in taxonomy_____
-graph_data = pd.read_csv(os.path.join('data','taxonomy','graph_data.csv'))\
-    .drop(columns = ['Unnamed: 0'])
-
-with open(os.path.join('data','taxonomy','edge_data.json'), 'r') as f:
-    edge_data = json.loads(f.read())
-
-taxonomy = nx.DiGraph()
-taxonomy.add_edges_from(edge_data)
-
-pos = {
-    node : xy
-    for node, xy in list(zip(graph_data.node.values, graph_data[['x','y']].values))
-}
-
-edge_x = []
-edge_y = []
-for (src, dest) in taxonomy.edges():
-    x0, y0 = pos[src]
-    x1, y1 = pos[dest]
-    edge_x.append(x0)
-    edge_x.append(x1)
-    edge_x.append(None)
-    edge_y.append(y0)
-    edge_y.append(y1)
-    edge_y.append(None)
-
-print('Data loaded!')
-
+parser = QueryParser('content', schema = myindex.schema)
 #%%
 #___FIGURES_____________
 BACKGROUND_COLOR = '#1F2132'
@@ -246,7 +189,6 @@ DATA_DIVS = html.Div(id='user_cache', style = {'display' : 'none'}, children = [
                 html.Div(id = 'visibility', style = {'display' : 'none'}),
                 html.Div(id = 'legend_tracker', style = {'display' : 'none'}),
                 html.Div(id = 'search_scores', style = {'display' : 'none'}),
-                #html.Div(id = 'const_data', style = {'display' : 'none'}),
                 html.Div(id = 'active_paper',style = {'display' : 'none'}),
             ])
 
@@ -372,7 +314,8 @@ app.layout = html.Div(children=[
     Creator: Allen Lynch
     LinkedIn: https://www.linkedin.com/in/allenwlynch
     Contact: allen.lynch1@outlook.com
-    ''')
+    '''),
+    dcc.Markdown('''Corpus provided by AllenAI for COVID-19 Open Research Dataset Challenge (CORD-19). SciSpacy Disease NER model also provided by AllenAI.'''),
 ])
 
 #%%
