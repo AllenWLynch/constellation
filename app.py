@@ -747,5 +747,5 @@ def got_it_callback(n_clicks):
         raise PreventUpdate
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
 
