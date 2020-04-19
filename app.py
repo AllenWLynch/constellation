@@ -23,11 +23,8 @@ from whoosh.qparser import QueryParser
 myindex = index.open_dir('data/search_index')
 parser = QueryParser('content', schema = myindex.schema)
 
-#%%
 app = dash.Dash(__name__)
 
-#%%
-DATA_FILE = './dash_sample.csv'
 #__Data_________________
 
 print('Loading data ...')
@@ -35,15 +32,6 @@ print('Loading data ...')
 _data = pd.read_csv(os.path.join('data','dashboard_data.csv')).set_index('index')
 _data.index = _data.index.astype(np.str)
 _data['tags'] = _data.tags.fillna('')
-
-def get_important_authors(authors_list):
-    all_authors = authors_list.split(';')
-    if len(all_authors) < 6:
-        return authors_list
-    else:
-        return all_authors[0] + ', et al.'
-
-_data['pretty_authors'] = _data.authors.apply(lambda x : get_important_authors(x))
 
 _groups = _data.groupby('label')
 num_groups = len(_groups)
@@ -53,9 +41,8 @@ with open(os.path.join('data','cluster_categories.txt'), 'r') as f:
     category_labels = f.readlines()
 
 #__Similarities_______
-with open(os.path.join('data','similarities.json'), 'r') as f:
-    similarities = json.loads(f.read())
-#%%
+similarities = pd.read_csv(os.path.join('data','similarities.csv')).astype(np.str)
+
 #__Load in taxonomy_____
 graph_data = pd.read_csv(os.path.join('data','taxonomy','graph_data.csv'))\
     .drop(columns = ['Unnamed: 0'])
@@ -85,7 +72,6 @@ for (src, dest) in taxonomy.edges():
 
 print('Data loaded!')
 
-#%%
 #___FIGURES_____________
 BACKGROUND_COLOR = '#1F2132'
 BOX_COLOR = '#262B3D'
@@ -335,7 +321,7 @@ app.layout = html.Div(children=[
                             ])
                         ])
                     ],
-                    className = 'infobox', style = {'height' : '86vh'}),
+                    className = 'infobox'), #style = {'height' : '86vh'}),
                 ], className = 'column',), 
             ], className = 'row', style = {'background-color' : BACKGROUND_COLOR, 'border' : 'none', 'padding' : '0px'}),
         ]),
@@ -368,11 +354,9 @@ app.layout = html.Div(children=[
         ]),
     ], style = {'margin-bottom' : '10px'}),
     html.Hr(),
-    dcc.Markdown('''
-    Creator: Allen Lynch
-    LinkedIn: https://www.linkedin.com/in/allenwlynch
-    Contact: allen.lynch1@outlook.com
-    ''')
+    dcc.Markdown('''Creator: Allen Lynch | LinkedIn: https://www.linkedin.com/in/allenwlynch | Contact: allen.lynch1@outlook.com'''),
+    dcc.Markdown('''Corpus courtesy of AllenAI as part of Covid-19 Open Research Dataset Challenge.'''),
+    dcc.Markdown('''Hosted on Azure Web Services'''),
 ])
 
 #%%
@@ -494,9 +478,10 @@ def update_visibility(filter_values, min_date):
     else:
         filters = set(json.loads(filter_values))
 
-    visible_mask = _data.apply(lambda x : is_visible(x, filters, min_date), axis = 1)
+    visible_mask = _data.apply(lambda x : is_visible(x, filters, min_date), axis = 1).to_dict()
 
-    visible_mask = list(visible_mask[visible_mask].index)
+    #isible_mask = list(visible_mask[visible_mask].index)
+    #visible_mask = 
 
     return json.dumps(visible_mask)
 
@@ -521,7 +506,7 @@ def update_search_scores(search_value):
 
 #FIX
 def get_top_sims(click_id):
-    return list(similarities[click_id].keys())[1:]
+    return similarities[click_id].values #list(similarities[click_id].keys())[1:]
 
 def is_legend_visible(legend_state, label):
     return legend_state[str(int(label + 1))]
@@ -538,7 +523,10 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
         connections = get_top_sims(active_paper_id)
         edge_x, edge_y = [], []
         for connection_id in connections:
-            if connection_id in visible_mask and is_legend_visible(legend_state, _data.loc[connection_id].label):
+            if connection_id == '0':
+                break
+            #elif connection_id in visible_mask and is_legend_visible(legend_state, _data.loc[connection_id].label):
+            elif visible_mask[connection_id] and is_legend_visible(legend_state, _data.loc[connection_id].label):
                 x, y = _data.loc[connection_id][['published_timestamp','norm_pagerank']].values
                 edge_x.extend([origin_x, x, None])
                 edge_y.extend([origin_y, y, None])
@@ -559,11 +547,10 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
     if active_paper_id is None or connections_made == 0:
 
-        if len(visible_mask) == 0:
-            fake_data = _data.iloc[0]
-        else:
-            fake_data = _data.loc[visible_mask[0]]
-
+        #if len(visible_mask) == 0:
+        fake_data = _data.iloc[0]
+        #else:
+        #    fake_data = _data.loc[visible_mask[0]]
         fig.add_trace((
             go.Scattergl(
                 x = [fake_data.published_timestamp], 
@@ -581,7 +568,8 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
     for i, (label, category_group) in enumerate(_groups):
 
-        vis_in_category = category_group[category_group.index.isin(visible_mask)]
+        #vis_in_category = category_group[category_group.index.isin(visible_mask)]
+        vis_in_category = category_group[category_group.index.map(pd.Series(visible_mask))]
 
         graph_group = vis_in_category.join(search_scores, how = 'left', sort = False)
         graph_group['search_score'].fillna(0, inplace = True)
@@ -609,19 +597,22 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
             ),
         )
 
-    suggestion_list = html.Ol([
-        html.Li(children = row_to_text(row[1]), style = {'margin-bottom' : '30px'})
-        for row in candidate_papers.nlargest(n = 50, columns = ['agg_score'], keep = 'first').iterrows()
-    ], style = {'list-style-type':'none', 'margin-top' : '20px'})
+    suggestion_list = None
+    if not candidate_papers.empty:
+        suggestion_list = html.Ol([
+            html.Li(children = row_to_text(row[1]), style = {'margin-bottom' : '30px'})
+            for row in candidate_papers.nlargest(n = 50, columns = ['agg_score'], keep = 'first').iterrows()
+        ], style = {'list-style-type':'none', 'margin-top' : '20px'})
 
     fig.update_layout(CONSTELLATION_LAYOUT)
     return fig, suggestion_list
 
 @app.callback(
     [Output('constellation','figure'), Output('suggestions_list','children')],
-    [Input('visibility','children'), Input('search_scores','children'), Input('active_paper','children'), Input('legend_tracker','children')]
+    [Input('visibility','children'), Input('search_scores','children'), Input('active_paper','children'), Input('legend_tracker','children')],
+    [State('suggestions_list','children')]
 )
-def update_paper_representations(vis_data, search_scores, active_paper_id, legend_state):
+def update_paper_representations(vis_data, search_scores, active_paper_id, legend_state, current_suggestions):
  
     visible_mask = json.loads(vis_data)
 
@@ -636,7 +627,9 @@ def update_paper_representations(vis_data, search_scores, active_paper_id, legen
 
     legend_state = json.loads(legend_state)
 
-    return get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
+    new_fig, new_list = get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
+
+    return new_fig, current_suggestions if new_list is None else new_list
 
 @app.callback(
     Output('url','pathname'),
@@ -656,15 +649,15 @@ def update_pathname(click_data):
     Output('active_paper', 'children'),
     [Input('visibility','children'), Input('url', 'pathname')]
 )
-def update_active_paper(vis_data, click_id):
-    print(click_id)
-    if vis_data is None:
+def update_active_paper(visible_mask, click_id):
+    if visible_mask is None:
         raise PreventUpdate()
     elif click_id is None:
         return None
     click_id = click_id[1:]
-    visible_nodes = json.loads(vis_data)
-    return click_id if click_id in visible_nodes else None
+    visible_mask = json.loads(visible_mask)
+    #return click_id if click_id in visible_nodes else None
+    return click_id if visible_mask[click_id] else None
     
 
 def update_abstract_box(active_paper_id):
