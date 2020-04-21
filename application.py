@@ -1,5 +1,4 @@
 
-#%%
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -15,17 +14,15 @@ import networkx as nx
 import datetime
 from dash.dependencies import Input, Output, State
 from datetime import datetime as dt
-
 import whoosh
 from whoosh import index
 from whoosh.qparser import QueryParser
 
+dash_app = dash.Dash(__name__)
+app = dash_app.server
+
 myindex = index.open_dir('data/search_index')
 parser = QueryParser('content', schema = myindex.schema)
-
-dash_app = dash.Dash(__name__)
-
-app = dash_app.server
 
 #__Data_________________
 
@@ -33,7 +30,7 @@ print('Loading data ...')
 #__Datapoints______
 _data = pd.read_csv(os.path.join('data','dashboard_data.csv')).set_index('index')
 _data.index = _data.index.astype(np.str)
-_data['tags'] = _data.tags.fillna('')
+_data['tags'] = _data.tags.fillna('').str.split('|')
 
 _groups = _data.groupby('label')
 num_groups = len(_groups)
@@ -80,17 +77,17 @@ BOX_COLOR = '#262B3D'
 
 #__TAB STYLE______________
 
-def get_tab_style(color1, color2, side = 'middle', height = 50):
+def get_tab_style(color1, color2, side = 'middle', height = 50, font_size = '2.2rem'):
 
     tab_style = {
         'background-color' : color1,
         'color' : '#fff',
         'font-family' : "Courier New",
         'border' : '3px solid ' + color2,
-        'font-size' : '2.15rem',
         'padding-top' : '4px',
         'height' : '{}px'.format(height),
         'border-radius' : '0px 0px 0px 0px',
+        'font-size' : font_size,
     }
     if side == 'left':
         tab_style['border-radius'] = '{0}px 0px 0px {0}px'.format(height//2)
@@ -101,28 +98,44 @@ def get_tab_style(color1, color2, side = 'middle', height = 50):
 
 #____Components_________________
 
+TUTORIAL_TEXT = [
+    '(1/9) First, check out the Constellation plot on the right side of the screen. This plot shows over 20,000 respiratory-disease-related papers according to their impact and publish date. The most important, most recent papers are located in the upper right corner.',
+    '(2/9) Click on the taxonomy graph below to filter for papers that mention that topic, or sub-topics. Filtering reduces the number of papers on your plot, which speeds up the app. Try to filter as much as possible!',
+    '(3/9) Click the \'X\' on the filter drop-down for the filter you just added. This deactivates the filter.',
+    '(4/9) Now, click on a paper to the left edge of the Constellation plot. Wait for the graph to re-render and you will see a constellation drawn between that paper and similar papers in the corpus! You can also see more information about the paper in the "Paper Information" box.',
+    '(5/9) Next, click on the legend below the Constellation plot. This hides a category of paper. Now double-click a category. This hides all cateogories except for the one you\'re interested in.' 
+    '(6/9) Whoops! You might have noticed that hiding all but one category also hides the constellation. To see it again, you just have to click on the "Constellation" icon in the legend. Remember to do this every time you double-click on a category.',
+    '(7/9) Now type "coronavirus" in the search bar. Notice the size of some papers\'s dots change. This shows papers that rank highly for your search term.',
+    '(8/9) Lastly, select a paper you are interested in so that its information populates the "Paper Information" box. Now, click "Save Paper". When you switch over to the other tab, you can view a list of papers you have saved. When you have a good list going you can use Constellation to generate a summary for you (comming soon).',
+    '(9/9) This has been a brief overview of ways you can interact with Constellation to find interesting information in these papers. Time is of the essence in the ongoing pandemic, so I hope this resource allows you track down vital information and make connections more quickly and easily than traditional methods. Stay informed and stay healthy!',
+]
+
 START_INFO = html.Div(className = 'infobox', id='explanation_infobox', children = [
-                            html.H1('Launch Instructions', className = 'infobox_header'),
+                            html.H4('Launch Instructions', className = 'infobox_header'),
                             html.P('''Welcome to Constellation! This dashboard is intended to use Natural Language Processing and Machine Learning to help Biomedical researchers 
                             investigate a trove of almost 24,000 COVID-19 and infectious-disease-related articles. Your Constellation (to the right) shows each paper 
                             as a star according to its importance in the corpus and its publish date. Click on a paper to see other papers with similar topics, filter by disease from the taxonomy below, explore
                             different categories, and when you've found some documents you like, save them and use the summary extraction feature to extract the important points quickly.''',
-                            style = {'margin-bottom' : '8px'}),
-                            html.Button('Got It!', id = 'got_it', style = {'margin-bottom' : '8px', 'margin' : 'auto'}),
+                            style = {'margin-bottom' : '8px', 'margin-left' : '15px', 'margin-right' : '15px'}, id = 'launch_instructions'),
+                            html.Br(),
+                            html.Div([
+                                #html.Button('Got It!', id = 'got_it', style = {'margin' : '8px'}),
+                                html.Button('Tutorial', id = 'tutorial_button', style = {'margin-left' : '15px'}),
+                            ], style = {'text-align' : 'center'})
                         ])
 
 ABSTRACT_BOX = html.Div([
                         html.Div([
-                            html.H1('Paper Information', className = 'infobox_header', style = {'float' : 'left', 'width' : '90%'}),
+                            html.H4('Paper Information', className = 'infobox_header', style = {'float' : 'left', 'width' : '90%'}),
                             dcc.ConfirmDialogProvider(
-                                html.Button(id = 'save_paper', children = 'Save Paper', style = {'font-family' : "Courier New", 'float' : 'right', 'font-size' : '1.6rem'}),
+                                html.Button(id = 'save_paper', children = 'Save Paper', style = {'font-family' : "Courier New", 'float' : 'right'}),
                                 id = 'confirm_saved_paper',
                                 message = 'Save this paper for summarization?',
                             ),
                         ]),
                         html.Div(style = {'clear' : 'both'}),
                         html.Div(children = [], id = 'abstract_box', style = {'margin-left' : '20px', 'margin-right' :'20px'}),
-                ], className='infobox', style = {'display': 'block', 'overflow': 'auto', 'height' : '34vh', 'margin-top' : '15px'})
+                ], className='infobox', style = {'display': 'block', 'overflow': 'auto', 'height' : '32vh', 'margin-top' : '15px'})
 
 CONSTELLATION_LAYOUT = dict(
                             margin = {'l': 55, 'b': 40, 't': 30, 'r': 35, 'pad' : 0},
@@ -198,7 +211,7 @@ SEARCH_BAR = html.Div([
                 html.Br(),
                 html.Div([
                     dcc.Input(id="searchbar", type="text", placeholder="", debounce=True,
-                    style = {'margin-right' : '5px', 'height' : '36px','display' : 'inline-block', 'width':'85%', 'font-size': '1.6rem',
+                    style = {'margin-right' : '5px', 'height' : '36px','display' : 'inline-block', 'width':'85%',
                                 'background-color' : BOX_COLOR, 'border-color' : '#fff','border-radius' : '2px', 'border-width' : '1px'}),
                     #html.Button('Submit'),
                 ], style = {'margin-top' : '0px', 'margin-bottom' : '15px'})
@@ -237,6 +250,11 @@ DATA_DIVS = html.Div(id='user_cache', style = {'display' : 'none'}, children = [
                 #html.Div(id = 'const_data', style = {'display' : 'none'}),
                 html.Div(id = 'active_paper',style = {'display' : 'none'}),
             ])
+
+LOADING_CHILDREN = html.Div(id = 'loading-output', children = [
+    html.P('If your constellations mysteriously disappear, make sure to reactivate the "Constellation" trace on the legend!', style = {'text-align' : 'center', 'margin-top' : '20px', 'font-size' : '1.0em'}),
+    html.P('If it still doesn\'t appear, there might be no similar papers in your view.', style = {'text-align' : 'center', 'font-size' : '1.0em'}),
+])
 
 MODELS_TAB = '''dcc.Tab(value = 'models', label = 'Models', style = get_tab_style(BOX_COLOR, BOX_COLOR, side = 'right'), selected_style = get_tab_style(BACKGROUND_COLOR, BOX_COLOR,side = 'right'), children = [
             html.Div([
@@ -280,7 +298,7 @@ dash_app.layout = html.Div(children=[
                 html.Div([
                     START_INFO,
                     html.Div([
-                        html.H1('Control Panel', className = 'infobox_header'),
+                        html.H4('Control Panel', className = 'infobox_header'),
                         html.Div(className= 'row', children = [
                             html.Div(className= 'column', children = [
                                 TAXONOMY
@@ -289,18 +307,18 @@ dash_app.layout = html.Div(children=[
                                 html.Label('Filter by Taxonomy'),
                                 FILTERS,
                                 html.P('Choose a filter term from the dropdown above, or directly from the taxonomy map. Constellation will find papers that contain the selected filter, along with all its sub-concepts',
-                                    style = {'width' : '90%', 'font-size' : '1.6rem'}),
+                                    style = {'width' : '90%'}),
                                 html.Br(),
                                 SEARCH_BAR,
                                 html.Br(),
                                 html.Label('See Papers Since'),
                                 html.Br(),
                                 dcc.DatePickerSingle(
-                                    id = 'data_picker',
-                                    min_date_allowed=dt(1975, 1, 1),
+                                    id = 'date_picker',
+                                    min_date_allowed=dt(1960, 1, 1),
                                     max_date_allowed=dt(2021, 1, 1),
-                                    initial_visible_month=dt(1975, 1, 1),
-                                    date=str(dt(1975, 1, 1)),
+                                    initial_visible_month=dt(1960, 1, 1),
+                                    date=str(dt(1960, 1, 1)),
                                     style = {'width' : '50%'},
                                 ),
                             ])
@@ -311,19 +329,32 @@ dash_app.layout = html.Div(children=[
                 #right panel
                 html.Div([
                     html.Div([
-                        html.H1('Literature', className = 'infobox_header'),
-                        dcc.Tabs(id = 'literature_search_tabs', value = 'constellation_tab', children = [
-                            dcc.Tab(label = 'Constellation', value = 'constellation_tab', style = get_tab_style(BOX_COLOR, BACKGROUND_COLOR,side = 'left', height = 40), selected_style = get_tab_style(BACKGROUND_COLOR, BACKGROUND_COLOR,side = 'left', height = 40), children =[
-                                CONSTELLATION,
-                                html.P('If your constellations mysteriously disappear, make sure to reactivate the "Constellation" trace on the legend!', style = {'text-align' : 'center', 'font-size' : '1.6rem', 'margin-top' : '20px'}),
-                                html.P('If it still doesn\'t appear, there might be no similar papers in your view.', style = {'text-align' : 'center', 'font-size' : '1.6rem'}),
+                        html.Div(id = 'bottom', children = [
+                            html.H4('Literature', className = 'infobox_header'),
+                            dcc.Tabs(id = 'literature_search_tabs', value = 'constellation_tab', children = [
+                                dcc.Tab(label = 'Constellation', value = 'constellation_tab', 
+                                    style = get_tab_style(BOX_COLOR, BACKGROUND_COLOR,side = 'left', height = 40, font_size = '1.8rem'), 
+                                    selected_style = get_tab_style(BACKGROUND_COLOR, BACKGROUND_COLOR,side = 'left', height = 40, font_size = '1.8rem'), 
+                                    children =[
+                                        html.Div(children = [
+                                            CONSTELLATION,
+                                            LOADING_CHILDREN,
+                                        ])
+                                ]),
+                                dcc.Tab(label = 'List', value = 'literature_list_tab', 
+                                    style = get_tab_style(BOX_COLOR, BACKGROUND_COLOR,side = 'right', height = 40, font_size = '1.8rem'), 
+                                    selected_style = get_tab_style(BACKGROUND_COLOR, BACKGROUND_COLOR,side = 'right', height = 40, font_size = '1.8rem'), 
+                                    children = [
+                                        LIT_LIST
+                                    ]
+                                ),
                             ]),
-                            dcc.Tab(label = 'List', value = 'literature_list_tab', style = get_tab_style(BOX_COLOR, BACKGROUND_COLOR,side = 'right', height = 40), selected_style = get_tab_style(BACKGROUND_COLOR, BACKGROUND_COLOR,side = 'right', height = 40), children = [
-                                LIT_LIST
-                            ])
-                        ])
+                        ]),
+                        html.Div(style = {'width' : '100%','height' : '30px', 'position' : 'absolute', 'top' : '40vh', 'left' : 0,
+                            'background-color' : '#ffffff00', 'pointer-events' : 'none',
+                        }, children = dcc.Loading(id = 'constellation-loading', type = 'cube')),
                     ],
-                    className = 'infobox'), #style = {'height' : '86vh'}),
+                    className = 'infobox', style = {'position' : 'relative'}),
                 ], className = 'column',), 
             ], className = 'row', style = {'background-color' : BACKGROUND_COLOR, 'border' : 'none', 'padding' : '0px'}),
         ]),
@@ -331,21 +362,23 @@ dash_app.layout = html.Div(children=[
             html.Div(children = [
                 html.Div(style = {'float' : 'left', 'width' : '33%', 'height' : '90vh'}, children = [
                     html.Div(className = 'infobox', children = [
-                        html.H1('Summary Information', className = 'infobox_header'),  
+                        html.H4('Summary Information', className = 'infobox_header'),  
                         html.P('''This summarization module extracts important sentences from a chosen set of documents. Those sentences serve as a summary, and aim to provide 
                             the most holistic review of the most important points shared by that body of documents. For a good summary, add 4-10 papers that share similar 
                             topics or categories. If papers are too disimilar, the summary quality will suffer because the algorithm will struggle to find common themes.'''),
                     ], style = {'width' : '100%',}),
                     html.Div(className = 'infobox', children = [
-                        html.H1('Saved Papers', className = 'infobox_header'),
-                        html.Button(id = 'remove_paper', children = 'Remove', style = {'font-family' : "Courier New", 'font-size' : '1.6rem', 'width' : '35%', 'margin-left' : '20px'}),
-                        html.Button(id = 'summarize', children = 'Summarize All ->', style = {'font-family' : "Courier New", 'font-size' : '1.6rem', 'width' : '35%', 'margin-left' : '20px'}),
-                        SUMMARY_SELECT,
+                        html.H4('Saved Papers', className = 'infobox_header'),
+                        html.Div([
+                            html.Button(id = 'remove_paper', children = 'Remove', style = {'font-family' : "Courier New", 'width' : '35%', 'margin-left' : '20px'}),
+                            html.Button(id = 'summarize', children = 'Summarize', style = {'font-family' : "Courier New", 'width' : '35%', 'margin-left' : '20px'}),
+                            SUMMARY_SELECT,
+                        ], style = {'margin-top' : '20px','text-align' :'center', 'height' : '95%'})
                     ], style = {'width' : '100%', 'height' : '50vh'}),
                 ]),
                 html.Div(style = {'float':'right', 'width' : '66%'},children = [
                     html.Div(className = 'infobox', children = [
-                        html.H1('Summary', className = 'infobox_header'),
+                        html.H4('Summary', className = 'infobox_header'),
                         dcc.Markdown('''No summary here yet! 
                                      The summarizer module requires a lot of data and is very expensive to run, so plugging it in to this application exceeds my current resources. If you are interested in or want to sponsor this feature,
                                      contact me about how it works and what I need to get it going!''', 
@@ -366,7 +399,7 @@ dash_app.layout = html.Div(children=[
 def row_to_text(row):
     doi_str = 'https://doi.org/' + str(row['doi'])
     return [
-        dcc.Link(row['title'], href = '/' + row.name, style = {'font-size' : '2.16rem', 'margin-bottom' : '5px', 'color' : '#fff', 'font-family' : "Courier New"}),
+        dcc.Link(row['title'], href = '/' + row.name, style = {'margin-bottom' : '5px', 'color' : '#fff', 'font-size' : '1.6em','font-family' : "Courier New"}),
         html.Br(),
         html.P(row.pretty_authors, style = {'margin-bottom' : '5px', 'display' : 'inline'}),
         html.Br(),
@@ -443,9 +476,9 @@ def update_taxonomy(filter_state):
 @dash_app.callback(
     Output('legend_tracker','children'),
     [Input('constellation','restyleData')],
-    [State('legend_tracker','children'), State('active_paper','children')]
+    [State('legend_tracker','children')]
 )
-def update_legend_tracker(restyle_event, legend_state, active_paper):
+def update_legend_tracker(restyle_event, legend_state):
 
     if legend_state is None:
         legend_state = {str(i) : True for i in range(num_groups + 1)}
@@ -464,14 +497,17 @@ def update_legend_tracker(restyle_event, legend_state, active_paper):
 def abides_filter(tags, filters):
     if len(filters) == 0:
         return True
-    return len(filters.intersection(set(tags.split('|')))) > 0
+    for filter_ in filters:
+        if filter_ in tags:
+            return True
+    return False
 
 def is_visible(row, filters, min_date):
     return abides_filter(row.tags, filters) and (min_date is None or row.published_timestamp >= min_date)
 
 @dash_app.callback(
     Output('visibility','children'),
-    [Input('filter_terms','children'), Input('data_picker','date')]
+    [Input('filter_terms','children'), Input('date_picker','date')]
 )
 def update_visibility(filter_values, min_date):
     
@@ -480,10 +516,12 @@ def update_visibility(filter_values, min_date):
     else:
         filters = set(json.loads(filter_values))
 
-    visible_mask = _data.apply(lambda x : is_visible(x, filters, min_date), axis = 1).to_dict()
+    visible_mask = _data.apply(lambda x : is_visible(x, filters, min_date), axis = 1)
 
-    #isible_mask = list(visible_mask[visible_mask].index)
-    #visible_mask = 
+    if visible_mask.values.all():
+        return 'all'
+
+    visible_mask = visible_mask[visible_mask].to_dict()
 
     return json.dumps(visible_mask)
 
@@ -508,7 +546,7 @@ def update_search_scores(search_value):
 
 #FIX
 def get_top_sims(click_id):
-    return similarities[click_id].values #list(similarities[click_id].keys())[1:]
+    return similarities[click_id].values
 
 def is_legend_visible(legend_state, label):
     return legend_state[str(int(label + 1))]
@@ -528,7 +566,8 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
             if connection_id == '0':
                 break
             #elif connection_id in visible_mask and is_legend_visible(legend_state, _data.loc[connection_id].label):
-            elif visible_mask[connection_id] and is_legend_visible(legend_state, _data.loc[connection_id].label):
+            elif is_legend_visible(legend_state, _data.loc[connection_id].label) and \
+                (visible_mask == 'all' or connection_id in visible_mask):
                 x, y = _data.loc[connection_id][['published_timestamp','norm_pagerank']].values
                 edge_x.extend([origin_x, x, None])
                 edge_y.extend([origin_y, y, None])
@@ -548,11 +587,7 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
                 ))
 
     if active_paper_id is None or connections_made == 0:
-
-        #if len(visible_mask) == 0:
         fake_data = _data.iloc[0]
-        #else:
-        #    fake_data = _data.loc[visible_mask[0]]
         fig.add_trace((
             go.Scattergl(
                 x = [fake_data.published_timestamp], 
@@ -570,34 +605,54 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
     for i, (label, category_group) in enumerate(_groups):
 
-        #vis_in_category = category_group[category_group.index.isin(visible_mask)]
-        vis_in_category = category_group[category_group.index.map(pd.Series(visible_mask))]
-
-        graph_group = vis_in_category.join(search_scores, how = 'left', sort = False)
-        graph_group['search_score'].fillna(0, inplace = True)
-
-        if not graph_group.empty and is_legend_visible(legend_state, i):
-            if search_scores.empty:
-                search_hits = graph_group
+        try:
+            if not is_legend_visible(legend_state, i):
+                raise AssertionError()
+            
+            if visible_mask == 'all':
+                graph_group = category_group
             else:
-                search_hits = vis_in_category.join(search_scores, how = 'inner', sort = False)
+                visible_in_category = category_group.index.map(visible_mask).fillna(False)
 
-            search_hits['agg_score'] = np.exp(search_hits.norm_pagerank + search_hits.search_score)
-            candidate_papers = candidate_papers.append(search_hits)
+                if not visible_in_category.any():
+                    raise AssertionError()
 
-        fig.add_trace(
-            go.Scattergl(
-                x = graph_group.published_timestamp, 
-                y = graph_group.norm_pagerank,
-                marker_color = px.colors.qualitative.Light24[i],
-                marker_line_color = px.colors.qualitative.Light24[i],
-                mode = 'markers',
-                marker_size = 5**graph_group.search_score * 8,
-                text = graph_group.title,
-                customdata = graph_group.index,
-                name = category_labels[label]
-            ),
-        )
+                graph_group = category_group.loc[visible_in_category]
+
+            graph_group['search_score'] = graph_group.index.map(search_scores).fillna(0)
+
+            graph_group['agg_score'] = np.exp(graph_group.norm_pagerank + graph_group.search_score)
+
+            candidate_papers.append(graph_group)
+
+            fig.add_trace(
+                go.Scattergl(
+                    x = graph_group.published_timestamp, 
+                    y = graph_group.norm_pagerank,
+                    marker_color = px.colors.qualitative.Light24[i],
+                    marker_line_color = px.colors.qualitative.Light24[i],
+                    mode = 'markers',
+                    marker_size = 5**graph_group.search_score * 8,
+                    text = graph_group.title,
+                    customdata = graph_group.index,
+                    name = category_labels[label]
+                ),
+            )
+        except AssertionError:
+            fake_data = _data.iloc[0]
+            fig.add_trace((
+                go.Scattergl(
+                    x = [fake_data.published_timestamp], 
+                    y = [fake_data.norm_pagerank],  
+                    marker_color = px.colors.qualitative.Light24[i],
+                    marker_line_color = px.colors.qualitative.Light24[i],
+                    mode = 'markers',
+                    marker_size = 0,
+                    text = fake_data.title,
+                    customdata = fake_data.index,
+                    name = category_labels[label]
+                )
+            ))
 
     suggestion_list = None
     if not candidate_papers.empty:
@@ -610,13 +665,13 @@ def get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
     return fig, suggestion_list
 
 @dash_app.callback(
-    [Output('constellation','figure'), Output('suggestions_list','children')],
+    [Output('constellation','figure'), Output('suggestions_list','children'), Output('constellation-loading', 'children')],
     [Input('visibility','children'), Input('search_scores','children'), Input('active_paper','children'), Input('legend_tracker','children')],
     [State('suggestions_list','children')]
 )
 def update_paper_representations(vis_data, search_scores, active_paper_id, legend_state, current_suggestions):
- 
-    visible_mask = json.loads(vis_data)
+    
+    visible_mask = vis_data if vis_data == 'all' else json.loads(vis_data)
 
     if search_scores is None:
         search_scores = pd.Series({})
@@ -631,7 +686,7 @@ def update_paper_representations(vis_data, search_scores, active_paper_id, legen
 
     new_fig, new_list = get_fig_and_list(visible_mask, search_scores, active_paper_id, legend_state)
 
-    return new_fig, current_suggestions if new_list is None else new_list
+    return new_fig, current_suggestions if new_list is None else new_list, None
 
 @dash_app.callback(
     Output('url','pathname'),
@@ -644,22 +699,25 @@ def update_pathname(click_data):
         click_id = click_data['points'][0]['customdata']
         return '/' + click_id
     except KeyError:
-        raise PreventUpdate
+        raise PreventUpdate()
 
 #__Constellations______________
 @dash_app.callback(
     Output('active_paper', 'children'),
-    [Input('visibility','children'), Input('url', 'pathname')]
+    [Input('url', 'pathname')],
+    [State('filter_terms', 'children'), State('date_picker','date')]
 )
-def update_active_paper(visible_mask, click_id):
-    if visible_mask is None:
-        raise PreventUpdate()
-    elif click_id is None:
+def update_active_paper(click_id, filter_terms, min_date):
+    if click_id is None or click_id is '':
         return None
     click_id = click_id[1:]
-    visible_mask = json.loads(visible_mask)
-    #return click_id if click_id in visible_nodes else None
-    return click_id if visible_mask[click_id] else None
+
+    if filter_terms is None:
+        filters = []
+    else:
+        filters = set(json.loads(filter_terms))
+
+    return click_id if is_visible(_data.loc[click_id], filters, min_date) else None
     
 
 def update_abstract_box(active_paper_id):
@@ -677,8 +735,8 @@ def update_abstract_box(active_paper_id):
     new_children.extend([
         html.Br(),
         html.Br(),
-        html.I('Abstract:', style = {'font-size' : '1.6rem'}),
-        html.P(abstract_text, style = {'font-family' : 'Arial', 'font-size' : '1.8rem'}),
+        html.I('Abstract:'),
+        html.P(abstract_text, style = {'font-family' : 'Arial'}),
     ])
     return new_children
 
@@ -735,19 +793,15 @@ def update_saved_papers(remove_paper, click_times, active_paper_id, options):
 
         return options
 
-#%%
-#__Searching__________
-
 @dash_app.callback(
-    Output('explanation_infobox','style'),
-    [Input('got_it','n_clicks')]
+    [Output('tutorial_button','children'), Output('launch_instructions','children'), Output('explanation_infobox', 'style')],
+    [Input('tutorial_button','n_clicks')],
 )
-def got_it_callback(n_clicks):
-    if not n_clicks is None and n_clicks > 0:
-        return {'display' : 'none'}
-    else:
-        raise PreventUpdate
+def update_tutorial(num_clicks):
+    if num_clicks is None or num_clicks == 0:
+        raise PreventUpdate()
+
+    return 'Next ->' if num_clicks < 8 else 'Done', TUTORIAL_TEXT[min(num_clicks-1, 7)], None if num_clicks < 9 else {'display' : 'none'}
 
 if __name__ == '__main__':
-    dash_app.run_server()
-
+    dash_app.run_server(debug = False)
